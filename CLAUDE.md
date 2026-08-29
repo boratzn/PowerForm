@@ -1,6 +1,9 @@
 @AGENTS.md
 
-# FitTrack — Proje Kuralları
+# Powerform — Proje Kuralları
+
+> Proje ismi "Powerform" — şartname dosyasında (ve bazı eski yorumlarda) hâlâ orijinal
+> çalışma adı "FitTrack" geçebilir, aynı projeden bahsediyor.
 
 Tam şartname: [docs/FITNESS_APP_SPEC.md](docs/FITNESS_APP_SPEC.md) (2061 satır — bölüm
 indeksine göre ilgili kısmı `sed -n` ile oku, tamamını `Read` etme). İlerleme durumu ve

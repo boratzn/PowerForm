@@ -1,9 +1,9 @@
 # Ortam değişkenleri
 
 > Not: bu repo `turax` çalışma alanı içindeki bir oturumda oluşturuldu; o workspace'in
-> `.env*` dosyalarını koruyan global bir hook'u var ve FitTrack için zararsız bir
+> `.env*` dosyalarını koruyan global bir hook'u var ve Powerform için zararsız bir
 > `.env.example` şablonu bile engelliyor. Bu yüzden gerekli değişkenler burada
-> belgeleniyor — gerçek `.env` dosyanı FitTrack klasöründe elle oluştur (proje kendi
+> belgeleniyor — gerçek `.env` dosyanı proje klasöründe elle oluştur (proje kendi
 > git reposuna geçtiğinde bu kısıtlama olmayacak).
 
 ## İstemci tarafı (Expo bundle'a gömer — `EXPO_PUBLIC_` zorunlu ön ek)

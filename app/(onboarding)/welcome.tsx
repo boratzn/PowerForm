@@ -13,7 +13,7 @@ export default function WelcomeScreen() {
       className="flex-1 justify-end gap-md bg-bg-primary px-lg"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 16 }}
     >
-      <Text className="text-3xl font-semibold text-text-primary">FitTrack</Text>
+      <Text className="text-3xl font-semibold text-text-primary">Powerform</Text>
       <Text className="text-base text-text-muted">
         Antrenmanını logla, beslenmeni takip et, gerçek verine erişimi olan bir AI koçla konuş.
       </Text>

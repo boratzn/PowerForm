@@ -1,4 +1,4 @@
-# FitTrack — İlerleme Durumu
+# Powerform — İlerleme Durumu
 
 > Bu dosya oturumlar arası devamlılık içindir. Yeni bir Claude Code oturumu bu projede
 > işe başlarken önce bunu, sonra gerekirse `docs/FITNESS_APP_SPEC.md`'nin ilgili
@@ -9,7 +9,7 @@ Son güncelleme: 2026-08-29
 
 ## Neresindeyiz
 
-**Faz 0 (Temel) — kısmen tamamlandı.** Proje `~/Desktop/FitTrack` altında, Expo SDK 57 +
+**Faz 0 (Temel) — kısmen tamamlandı.** Proje `~/Desktop/Powerform` altında, Expo SDK 57 +
 TypeScript + Expo Router + NativeWind + Zustand + TanStack Query + Supabase JS +
 Drizzle/expo-sqlite ile scaffold edildi. Supabase migration'ları (§6-7 DDL'in tamamı)
 ve RLS pgTAP testi yazıldı. Navigasyon iskeleti (6 sekme + auth + onboarding + tam
@@ -227,7 +227,7 @@ sadece gerçek çalıştırma ile ortaya çıktı):
 
 1. **Supabase projesini kur ve migration'ları uygula**
    ```bash
-   cd ~/Desktop/FitTrack
+   cd ~/Desktop/Powerform
    npx supabase login          # tarayıcıda yetkilendirme ister
    npx supabase init           # supabase/config.toml üretir (henüz yok)
    npx supabase link --project-ref <proje-ref>   # veya "npx supabase start" ile yerel

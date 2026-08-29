@@ -3,6 +3,6 @@ import { openDatabaseSync } from 'expo-sqlite';
 
 import * as schema from './schema';
 
-const sqlite = openDatabaseSync('fittrack.db');
+const sqlite = openDatabaseSync('powerform.db');
 
 export const db = drizzle(sqlite, { schema });
