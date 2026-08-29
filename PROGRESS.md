@@ -5,7 +5,7 @@
 > bölümünü okusun. Tam şartname 2061 satır — tamamını okumak yerine bölüm indeksinden
 > (`grep -n "^# [0-9]" docs/FITNESS_APP_SPEC.md`) ilgili aralığı `sed -n` ile al.
 
-Son güncelleme: 2026-08-29
+Son güncelleme: 2026-08-30
 
 ## Neresindeyiz
 
@@ -20,13 +20,22 @@ Supabase'e henüz yazılmadı** (Supabase projesi kurulmadığı için — kulla
 bilinçli olarak sonraya bıraktı). Detaylar aşağıda.
 
 **Paket 3 (seans ekranı) — YAZILDI VE GERÇEK BİR iOS SİMÜLATÖRÜNDE UÇTAN UCA
-DOĞRULANDI** (Expo Go üzerinden, iPhone 17 Pro / iOS 26.2 simülatörü). Kullanıcının
-açık isteğiyle Supabase/Anthropic bağlantısı kurulmadı — ekran tamamen yerel SQLite
-üzerinde, "boş/ad-hoc seans" akışıyla çalışıyor (program bazlı başlatma henüz yok,
-program oluşturucu da yok). Bu doğrulama sürecinde **3 gerçek bug bulundu ve
-düzeltildi** (Drizzle migration'ları hiç çalışmıyordu, .sql importu Metro'yu
+DOĞRULANDI** (Expo Go üzerinden, iPhone 17 Pro / iOS 26.2 simülatörü). Ekran tamamen
+yerel SQLite üzerinde, "boş/ad-hoc seans" akışıyla çalışıyor (program bazlı başlatma
+henüz yok, program oluşturucu da yok). Bu doğrulama sürecinde **3 gerçek bug bulundu
+ve düzeltildi** (Drizzle migration'ları hiç çalışmıyordu, .sql importu Metro'yu
 kırıyordu, kütüphane detay ekranı sekme çubuğunda fazladan bir sekme olarak
 görünüyordu) — detaylar aşağıda "Simülatör doğrulaması" bölümünde.
+
+**Faz 0'ın kalanı — Auth akışı Supabase'e bağlandı ve GERÇEK BİR HESAPLA UÇTAN UCA
+DOĞRULANDI.** Kullanıcı kendi Supabase projesini (`srbhvxajhnqbsluoysqo`, eu-bölgesi)
+verdi; 12 migration + bir düzeltme migration'ı o projeye uygulandı, gerçek
+`src/types/database.ts` üretildi, login/register/useAuthStore/routing yazıldı.
+Kayıt → e-posta onayı → giriş → onboarding'e otomatik yönlendirme zinciri kullanıcının
+kendi Gmail hesabıyla gerçekten test edildi ve çalıştı. Bu süreçte **bir gerçek backend
+bug'ı** bulundu ve düzeltildi (`handle_new_user` trigger'ı `search_path` eksikliğinden
+her kayıtta "Database error saving new user" ile başarısız oluyordu). Detaylar
+aşağıda "Auth akışı doğrulaması" bölümünde.
 
 ## Tamamlanan (Faz 0)
 
@@ -198,73 +207,137 @@ sadece gerçek çalıştırma ile ortaya çıktı):
 - Uygulama seans ortasında kapanıp yeniden açılırsa, DB'de `in_progress` bir seans
   kalır ama ekran onu otomatik algılayıp geri açmıyor (state Zustand'da, kalıcı değil).
   "Devam eden seansı algıla" bir sonraki iterasyon işi.
-- `LOCAL_USER_ID` sabit bir placeholder (`'local-user'`) — auth bağlanınca gerçek
-  `supabase.auth` kullanıcı id'siyle değişecek.
+- ~~`LOCAL_USER_ID` sabit bir placeholder~~ **ÇÖZÜLDÜ** — `useSessionStore.startSession()`
+  artık `useAuthStore.getState().session?.user.id`'yi kullanıyor (bkz. aşağıdaki
+  "Tamamlanan (Faz 0'ın kalanı — Auth akışı)" bölümü).
+
+## Tamamlanan (Faz 0'ın kalanı — Auth akışı)
+
+- [x] Kullanıcının kendi Supabase projesi bağlandı: `npx supabase login` (kullanıcı
+      kendi tarayıcısında tamamladı) → `supabase init` → `supabase link --project-ref
+      srbhvxajhnqbsluoysqo` → `supabase db push` — **12 migration da hiç hatasız
+      uygulandı** (Paket 1'in "temiz kurulum" doğrulaması artık gerçek bir Postgres'e
+      karşı yapıldı, sadece CLI'de değil)
+- [x] `src/types/database.ts` artık gerçek şemadan üretildi:
+      `supabase gen types typescript --linked` (1585 satır, placeholder kalktı)
+- [x] `src/stores/useAuthStore.ts` — `session`, `profile` (profiles satırı,
+      onboarding_done kontrolü için), `initialize()` (`getSession` + `onAuthStateChange`
+      dinleyicisi), `refreshProfile()`, `signOut()`
+- [x] `app/(auth)/login.tsx`, `register.tsx` — gerçek `supabase.auth.signInWithPassword`
+      / `signUp` çağrıları, yükleniyor/hata durumları, e-posta onayı bekleniyor ekranı
+      (proje "Confirm email" açık olduğu için signUp sonrası session hemen gelmiyor)
+- [x] `app/_layout.tsx` — `useSegments`/`useRouter` ile auth guard: session yoksa
+      `(auth)`, session var ama `profiles.onboarding_done=false` ise `(onboarding)`,
+      ikisi de tamamsa `(tabs)`. Migration + auth initialize bitene kadar "Hazırlanıyor…"
+      ekranı gösteriyor
+- [x] `app/(tabs)/profile/index.tsx` — kullanıcı e-postası + "Çıkış Yap" butonu eklendi
+      (test amaçlı, onboarding tamamlanmadığı için bu oturumda tıklanarak
+      doğrulanamadı — bkz. aşağıdaki sınırlama)
+- [x] `useSessionStore.startSession()` artık gerçek `session.user.id`'yi kullanıyor,
+      sahte `LOCAL_USER_ID` kaldırıldı
+
+### Bulunan ve düzeltilen gerçek bug'lar
+
+1. **`@react-native-async-storage/async-storage` sürüm uyumsuzluğu** — Faz 0'da
+   `3.1.1` kurulmuştu, Expo SDK 57 `2.2.0` bekliyor. Sonuç: Expo Go'da
+   `AsyncStorageError: Native module is null` ile uygulama "Hazırlanıyor…" ekranında
+   sonsuza kadar takılı kalıyordu (Supabase Auth session'ı okuyamıyordu).
+   `npx expo install @react-native-async-storage/async-storage` ile düzeltildi.
+   **Ders:** yeni bir native paket eklerken her zaman `npx expo install` kullan,
+   çıplak `npm install` semver aralığını Expo Go'nun beklediğinden başka bir sürüme
+   çözebiliyor — `npx expo install --check` bunu erkenden yakalardı.
+2. **`handle_new_user()` trigger'ı her kayıtta başarısız oluyordu** — gerçek bir
+   hesapla kayıt denendiğinde Supabase Auth `"Database error saving new user"`
+   döndürdü. Neden: `auth.users` INSERT tetikleyicisi bağlamında varsayılan
+   `search_path` `public` şemasını içermiyor, bu yüzden `INSERT INTO profiles (...)`
+   (şema öneki olmadan) tabloyu bulamıyordu — Supabase'de belgelenmiş, sık
+   karşılaşılan bir tuzak. `013_fix_handle_new_user_search_path.sql`: tabloyu
+   `public.profiles` olarak nitelendirip fonksiyona `SET search_path = public`
+   eklendi. Düzeltmeden sonra kayıt/onay/giriş/onboarding yönlendirmesi kullanıcının
+   gerçek Gmail hesabıyla uçtan uca çalıştı.
+
+### Auth akışı doğrulaması
+
+Simülatörde gerçek adımlarla test edildi: Kayıt Ol → (ilk denemede yukarıdaki #2
+bug'ı yakaladı) → düzeltme sonrası tekrar Kayıt Ol → "E-postanı kontrol et" ekranı →
+kullanıcı kendi Gmail'inden onay linkine tıkladı (link `localhost:3000`'e
+yönlendirmeye çalıştığı için tarayıcı hata verdi — **bu kozmetik bir sorun, asıl
+onay server tarafında zaten gerçekleşmişti**, bkz. aşağıdaki sınırlama) → uygulamaya
+dönüp Giriş Yap → **otomatik olarak `(onboarding)/welcome` ekranına yönlendirildi**
+(profiles.onboarding_done=false olduğu için, tam beklenen davranış).
+
+Simülatörün varsayılan klavyesi Türkçe olduğu için e-posta adreslerindeki `.`/`@`
+karakterleri yanlış giriliyordu (`ç`/`'` üretiyordu) — İngilizce (US) dışındaki tüm
+klavyeler simülatörden kaldırılarak çözüldü (bu sadece test ortamı sorunuydu,
+uygulama kodunda değil).
 
 ## Yapılmadı / bilinçli ertelendi
 
-- [ ] **`.env` dosyası yok.** Bu oturum `turax` workspace'i içinde çalıştığı için o
-      workspace'in global secret-protection hook'u `.env*` adlı her dosyayı (içeriği
-      zararsız bile olsa) engelliyor. `docs/ENVIRONMENT.md`'deki değişkenleri elle
-      `.env` dosyasına kopyala.
-- [ ] Supabase projesi henüz **oluşturulmadı ve migration'lar hiçbir yere uygulanmadı**.
-      `npx supabase init` bu repoda hiç çalıştırılmadı (CLI kurulu değildi, `npx` ile
-      ilk kullanımda otomatik iner). Sıradaki adım aşağıda.
-- [ ] `src/types/database.ts` gerçek Supabase tipleri değil, placeholder
-      (`Record<string, unknown>`) — migration'lar bir projeye uygulanınca
-      `npx supabase gen types typescript --local > src/types/database.ts` ile üret.
-- [ ] `src/lib/supabase.ts` auth storage'ı AsyncStorage — production'a girmeden önce
-      Supabase'in Expo rehberindeki "LargeSecureStore" (expo-secure-store + şifreleme)
-      desenine geçilmeli, dosyadaki TODO yorumuna bak.
-- [ ] `expo start` ile gerçek cihaz/simülatörde henüz görsel doğrulama yapılmadı
-      (bkz. "Doğrulanmadı" bölümü).
-- [ ] Auth ekranları (`app/(auth)/*`) sadece UI iskeleti — `supabase.auth.signInWithPassword`
-      vb. gerçek çağrılar yok. Apple/Google girişi hiç eklenmedi.
+- [ ] **Supabase Auth "Redirect URLs" yapılandırılmadı.** E-posta onay linki şu an
+      Supabase'in varsayılan `http://localhost:3000`'ine yönlendirmeye çalışıyor,
+      kullanıcının tarayıcısında "bağlanamadı" hatası veriyor. Asıl onay server
+      tarafında zaten gerçekleşiyor (test edildi, sorun sadece kozmetik) ama gerçek
+      kullanıcılar için düzeltilmeli: Supabase Dashboard → Authentication → URL
+      Configuration → Site URL / Redirect URLs'e uygulamanın deep link şemasını
+      (`powerform://`) ekle. Bu dashboard ayarı, ben erişemiyorum.
+- [ ] `src/lib/supabase.ts` auth storage'ı hâlâ AsyncStorage — production'a girmeden
+      önce Supabase'in Expo rehberindeki "LargeSecureStore" (expo-secure-store +
+      şifreleme) desenine geçilmeli, dosyadaki TODO yorumuna bak.
+- [ ] **"Çıkış Yap" butonu UI'da var ama tıklanarak doğrulanmadı** — Profil sekmesine
+      ulaşmak için onboarding'i tamamlamak gerekiyor, onboarding formu (profil
+      kurulumu) henüz yazılmadı. `useAuthStore.signOut()` kod incelemesiyle doğru
+      kabul edildi (login ile aynı `onAuthStateChange` mekanizmasını kullanıyor,
+      o test edildi) ama UI'dan tıklanarak kanıtlanmadı.
 - [ ] Onboarding akışı (§11) sadece "welcome" ve "profile-setup" placeholder'ı var;
-      3 slaytlık karşılama, deneyim/hedef adımı, gün/ekipman adımı eksik.
+      3 slaytlık karşılama, gerçek profil formu (boy/kilo/doğum yılı/cinsiyet/deneyim/
+      hedef/gün/ekipman) ve formun sonunda `profiles.onboarding_done = true` yapan
+      bir submit hiç yok. **Bu, sıradaki en mantıklı iş** — onsuz hiçbir yeni
+      kullanıcı `(tabs)`'a ulaşamıyor.
+- [ ] Şifre sıfırlama akışı (F1'in parçası) hiç yazılmadı.
+- [ ] Apple/Google ile giriş hiç eklenmedi (Apple Developer / Google Cloud hesabı
+      gerektiriyor — kullanıcıyla daha önce bilinçli olarak sonraya bırakıldı).
 
 ## Sıradaki adım (spec §15'teki sıraya göre)
 
-1. **Supabase projesini kur ve migration'ları uygula**
-   ```bash
-   cd ~/Desktop/Powerform
-   npx supabase login          # tarayıcıda yetkilendirme ister
-   npx supabase init           # supabase/config.toml üretir (henüz yok)
-   npx supabase link --project-ref <proje-ref>   # veya "npx supabase start" ile yerel
-   npx supabase db push        # migrations/ altındaki 12 dosyayı uygular
-   npx supabase gen types typescript --linked > src/types/database.ts
-   ```
-   AB (Frankfurt) bölgesini seç (§13.2 KVKK notu). `.env`'i `docs/ENVIRONMENT.md`'ye
-   göre doldur.
+1. ~~Supabase projesini kur ve migration'ları uygula~~ **YAPILDI** — proje bağlı
+   (`srbhvxajhnqbsluoysqo`), 13 migration uygulandı, gerçek tipler üretildi.
 
-2. **Paket 2'yi tamamla — çeviri + Supabase'e yazma** (script hazır, sadece
-   credential eksik):
+2. ~~Auth akışını gerçek Supabase çağrılarına bağla~~ **YAPILDI VE GERÇEK HESAPLA
+   DOĞRULANDI** — bkz. "Tamamlanan (Faz 0'ın kalanı — Auth akışı)" bölümü.
+
+3. ~~Paket 3 — Seans ekranı~~ **YAPILDI VE SİMÜLATÖRDE DOĞRULANDI** — bkz.
+   "Simülatör doğrulaması" bölümü.
+
+4. **Onboarding formu (profil kurulumu)** — şimdi en mantıklı sıradaki adım.
+   `app/(onboarding)/profile-setup.tsx` şu an placeholder; boy/kilo/doğum yılı/
+   cinsiyet/deneyim/hedef/gün/ekipman formunu yazıp submit'te
+   `profiles.onboarding_done = true` yapan bir `supabase.from('profiles').update(...)`
+   çağrısı eklemek gerekiyor. Bu olmadan hiçbir yeni kullanıcı `(tabs)`'a giremiyor
+   (routing guard onları sonsuza kadar `(onboarding)`'de tutar) — "Çıkış Yap"ı UI'dan
+   test etmek için de bu şart.
+
+5. **Paket 2'yi tamamla — çeviri + Supabase'e yazma** (script hazır, sadece
+   credential eksik, migration'lar artık uygulı olduğu için `write.ts` çalışabilir):
    ```bash
-   # .env'e ANTHROPIC_API_KEY, EXPO_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-   # eklendikten sonra (bkz. docs/ENVIRONMENT.md):
+   # .env'e ANTHROPIC_API_KEY ve SUPABASE_SERVICE_ROLE_KEY eklendikten sonra:
    export $(grep -v '^#' .env | xargs)   # ya da dotenv-cli kullan
    npm run seed:exercises
    ```
    Çeviri ~44 batch (876 egzersiz / 20) sürer, her batch sonrası
    `scripts/seed-exercises/.cache/translations.json`'a kaydedilir — kesilirse
    `npm run seed:exercises` tekrar çalıştırıldığında zaten çevrilmiş slug'ları atlar.
-   Adım 1 (migration'lar) bitmeden `write.ts` hata verir (tablolar yok), ama
-   `translate.ts` bağımsız çalışabilir. Rapordaki 156 "varsayılan side_delt"
-   egzersizi elle gözden geçirmeyi düşün (`mapping-report.json` →
-   `shoulderClassification.fallbackDefault`).
+   Rapordaki 156 "varsayılan side_delt" egzersizi elle gözden geçirmeyi düşün
+   (`mapping-report.json` → `shoulderClassification.fallbackDefault`).
 
-3. **Auth akışını gerçek Supabase çağrılarına bağla** (Faz 0'ın kalanı): login/register
-   ekranlarına `supabase.auth.*`, `useAuthStore`'u `onAuthStateChange` ile besle,
-   `app/_layout.tsx`'e session'a göre `(auth)` ↔ `(tabs)` yönlendirmesi ekle.
-   `useSessionStore`'daki `LOCAL_USER_ID` sabitini gerçek kullanıcı id'siyle değiştir.
+6. **Supabase Auth Redirect URLs'i düzelt** (dashboard ayarı, bkz. "Yapılmadı"):
+   e-posta onay linki şu an `localhost:3000`'e gidiyor. `powerform://` deep link
+   şeması eklenmeli.
 
-4. ~~Paket 3 — Seans ekranı~~ **YAPILDI VE SİMÜLATÖRDE DOĞRULANDI** (bu oturumda) —
-   bkz. "Simülatör doğrulaması" bölümü.
+7. **Paket 4 — AI katmanı** (§5, §8.2): `supabase/functions/ai-chat/` — gerçek
+   kullanıcı verisi (antrenman geçmişi) olmadan anlamlı test edilemez, bu yüzden
+   sona bırakıldı.
 
-5. **Paket 4 — AI katmanı** (§5, §8.2): `supabase/functions/ai-chat/` — Faz 0/1/2
-   verisi olmadan anlamlı test edilemez, bu yüzden sona bırakıldı.
-
-6. **Program oluşturucu** (F4, henüz bir "Paket" olarak tanımlanmadı ama Paket 3'ün
+8. **Program oluşturucu** (F4, henüz bir "Paket" olarak tanımlanmadı ama Paket 3'ün
    ortaya çıkardığı bağımlılık): seans ekranı şu an sadece boş/ad-hoc başlıyor;
    programa bağlı başlatma (hedef set/tekrar/RIR/dinlenme otomatik yüklensin) için
    önce `program_days`/`program_exercises`'ın yerel bir aynası ve program düzenleme
@@ -291,18 +364,27 @@ Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
       Tab bar, egzersiz arama, özel klavye, PR tespiti, dinlenme sayacı + bildirim
       izni, uzun-basma menüsü, seans bitirme özeti — hepsi ekran görüntüleriyle
       doğrulandı, konsol hatasız.
+- [x] **12+1 migration gerçek bir Supabase Postgres'ine karşı `supabase db push`
+      ile hatasız uygulandı** — Paket 1'in "temiz kurulum" doğrulaması artık
+      gerçek bir projeye karşı yapıldı (`supabase db reset` değil ama pratikte
+      aynı garantiyi veriyor: sıfırdan bir projeye 13 dosyanın tamamı sırayla
+      hatasız uygulandı).
+- [x] **Auth akışının tamamı gerçek bir Gmail hesabıyla uçtan uca doğrulandı** —
+      kayıt → e-posta onayı → giriş → onboarding'e otomatik yönlendirme. Bkz.
+      "Auth akışı doğrulaması" bölümü.
 
 ## Doğrulanmadı (bir sonraki oturumda ilk iş — ÖNCELİKLİ)
 
+- [ ] "Çıkış Yap" UI'dan tıklanarak denenmedi (onboarding formu yazılmadığı için
+      Profil sekmesine ulaşılamıyor) — bkz. "Yapılmadı" bölümü.
 - [ ] "Aynısı" (sameAsLast) butonu simülatör turunda hiç tıklanmadı — kod yolu var
       (`NumericKeypad`'de koşullu render), ama gerçek dokunuşla denenmedi.
 - [ ] "+ Set Ekle" ile 2. seti eklemek, "Not Ekle" akışı (buton hâlâ yok, `ExerciseCard`'da
       görsel eksik) ve `expo-keep-awake`'in gerçekten ekranı uyanık tuttuğu (simülatörde
       gözlemlenemez, sadece fiziksel cihazda anlamlı) test edilmedi.
 - [ ] Android tarafı hiç denenmedi (sadece iOS simülatörü).
-- [ ] `supabase/migrations/*` dosyaları gerçek bir Postgres'e karşı `supabase db reset`
-      ile temiz kurulum olarak çalışıyor mu (Paket 1'in istediği doğrulama — CLI kurulu
-      olmadığı için bu oturumda koşulamadı, "Sıradaki adım" bölümüne bkz.)
+- [ ] RLS'in gerçek projede de doğru çalıştığı sadece pgTAP dosyasıyla (statik,
+      koşulmadı) değil, iki farklı gerçek kullanıcıyla canlı olarak doğrulanmadı.
 
 ## Bilinen kararlar / neden
 
@@ -322,3 +404,12 @@ Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
 - **Drizzle migration'ları `babel-plugin-inline-import` ile**, Metro `sourceExts`
   tek başına yetmiyor (dosyayı JS olarak parse etmeye çalışıp çöküyor) — Drizzle'ın
   resmi Expo dokümantasyonundaki yöntem bu, bkz. "Simülatör doğrulaması" bölümü.
+- **Yeni native paket eklerken her zaman `npx expo install`, çıplak `npm install`
+  değil**: async-storage'ın Expo Go'nun beklediğinden farklı bir sürüme çözülmesi
+  ("Native module is null" hatası, bkz. "Auth akışı doğrulaması") bu kuralın
+  ihlalinden kaynaklandı. `npx expo install --check` şüpheli durumlarda erken uyarır.
+- **013_fix_handle_new_user_search_path.sql ayrı bir migration olarak eklendi**,
+  011_triggers.sql elle düzenlenmedi: zaten uygulanmış bir migration'ı değiştirmek
+  gerçek bir projede geçmişle tutarsızlık yaratır (checksum/journal uyuşmazlığı) —
+  CLAUDE.md'nin "Şema değişikliği SADECE migration ile" kuralına uyarak düzeltme
+  yeni bir migration olarak eklendi.

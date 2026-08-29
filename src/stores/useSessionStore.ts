@@ -7,10 +7,7 @@ import { db } from '../db/client';
 import { recordMutation } from '../db/mutations';
 import { getBestE1RM, getLastPerformance, type LocalExercise } from '../db/queries';
 import { sessionExercises, sessionSets, workoutSessions } from '../db/schema';
-
-// Auth henüz bağlanmadı (bkz. PROGRESS.md) — gerçek supabase.auth.user().id gelene kadar
-// yerel seansları tek bir sahte kullanıcıya bağlıyoruz. Auth akışı kurulunca bu sabit kalkacak.
-const LOCAL_USER_ID = 'local-user';
+import { useAuthStore } from './useAuthStore';
 
 const DEFAULT_REST_SECONDS = 90;
 
@@ -78,11 +75,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   // §12: yerel yazma önce SQLite'a, DB satırı seans başlar başlamaz oluşur —
   // uygulama seans ortasında kapanırsa/çökerse veri kaybolmaz.
   startSession: async () => {
+    const userId = useAuthStore.getState().session?.user.id;
+    if (!userId) throw new Error('startSession: aktif oturum yok');
+
     const clientUuid = generateUuid();
     const startedAt = Math.floor(Date.now() / 1000);
     await db.insert(workoutSessions).values({
       clientUuid,
-      userId: LOCAL_USER_ID,
+      userId,
       status: 'in_progress',
       startedAt,
     });
