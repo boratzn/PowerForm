@@ -15,6 +15,10 @@ Drizzle/expo-sqlite ile scaffold edildi. Supabase migration'ları (§6-7 DDL'in 
 ve RLS pgTAP testi yazıldı. Navigasyon iskeleti (6 sekme + auth + onboarding + tam
 ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde placeholder.
 
+**Paket 2 (egzersiz veri seti) — script tamamlandı ve gerçek veriyle test edildi,
+Supabase'e henüz yazılmadı** (Supabase projesi kurulmadığı için — kullanıcı bu adımı
+bilinçli olarak sonraya bıraktı). Detaylar aşağıda.
+
 ## Tamamlanan (Faz 0)
 
 - [x] Expo + TypeScript + Expo Router kurulumu (`create-expo-app` blank-typescript,
@@ -47,6 +51,54 @@ ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde 
 - [x] `docs/ENVIRONMENT.md` — gerekli env değişkenlerinin dokümantasyonu (bkz. not aşağıda)
 - [x] `docs/FITNESS_APP_SPEC.md` — orijinal şartnamenin kopyası (Downloads'taki
       orijinali silinir/taşınırsa diye)
+
+## Tamamlanan (Paket 2 — egzersiz veri seti)
+
+`scripts/seed-exercises/` — modüler pipeline, her aşama ayrı dosyada:
+
+- [x] `fetch.ts` — free-exercise-db'yi (yuhonas/free-exercise-db, `dist/exercises.json`)
+      indirir, `.cache/exercises-raw.json`'a önbelleğe alır (`--refresh` verilmedikçe
+      ağa tekrar gitmez)
+- [x] `types.ts` — kaynak/hedef tipler; `MUSCLE_GROUP_IDS` spec §5.3
+      `search_exercises.primary_muscle` enum'uyla birebir
+- [x] `muscle-map.ts` — equipment/mechanic/force/level eşleme tabloları,
+      `MUSCLE_GROUPS_SEED` (16 satır, Türkçe adlarla), kas ismi eşleme tablosu,
+      `classifyShoulderRegion()` (kaynakta ayrılmayan "shoulders" etiketini isim
+      anahtar kelimelerinden front/side/rear_delt'e sınıflandıran sezgisel fonksiyon)
+- [x] `transform.ts` — dönüştürme + **eşlenemeyenleri sessizce atlamayan rapor**
+      (§15 Paket 2 madde 3 kuralı)
+- [x] `translate.ts` — Claude API ile 20'li batch çeviri (instructions_tr/cues_tr/
+      common_mistakes_tr), tool-use ile yapılandırılmış çıktı, batch başına diske
+      kaydeden önbellek (kesintide kaldığı yerden devam eder), üstel geri çekilmeli
+      retry. `ANTHROPIC_API_KEY` yoksa adım atlanır, script çökmez
+- [x] `write.ts` — Supabase'e idempotent upsert (`service_role` key ile, çünkü
+      is_custom=false sistem egzersizleri RLS'in `write_custom_exercises`
+      politikasının kapsamı dışında — bkz. dosyadaki yorum). Env değişkeni yoksa
+      adım atlanır
+- [x] `index.ts` — orkestratör, `npm run seed:exercises` (`-- --refresh` ile
+      yeniden indirir)
+- [x] devDependencies: `tsx`, `@anthropic-ai/sdk`
+
+**Gerçek veriyle çalıştırıldı ve doğrulandı** (credential gerektirmeyen kısım):
+876/876 egzersiz dönüştürüldü, `npx tsc --noEmit` temiz. Eşleme raporu:
+
+| Bulgu | Sayı | Not |
+|---|---|---|
+| `equipment = null` → `other` | 77 | kaynakta boş |
+| Yaklaşık equipment eşleşmesi (→ `other`) | 171 | e-z curl bar, foam roll, medicine ball, exercise ball, "other" |
+| Eşlenemeyen kas: `adductors` | 54 egzersiz | `muscle_groups`'ta karşılığı yok, bağlantı kurulmadı |
+| Eşlenemeyen kas: `abductors` | 43 egzersiz | aynı |
+| Eşlenemeyen kas: `neck` | 9 egzersiz | aynı |
+| Yaklaşık kas: `middle back` → `upper_back` | 100 egzersiz | en yakın karşılık |
+| `shoulders` sınıflandırması | 183 anahtar kelimeyle eşleşti, **156 varsayılan (side_delt)** | ilk sürümde 285'ti, "press/push/row" gibi ek anahtar kelimelerle iyileştirildi — kalan 156 elle gözden geçirilmeli |
+| Boş `instructions` | 5 egzersiz | kaynak veride eksik |
+
+jsdelivr CDN üzerinden egzersiz görselleri doğrulandı (`curl -I` → 200,
+`image/jpeg`). Tam rapor: `scripts/seed-exercises/.cache/mapping-report.json`
+(gitignored — yeniden üretilebilir, `npm run seed:exercises` ile).
+
+**Bu oturumda YAPILMADI:** çeviri (ANTHROPIC_API_KEY yok) ve Supabase'e yazma
+(Supabase projesi yok) — ikisi de kullanıcının bilinçli tercihiyle sonraya bırakıldı.
 
 ## Yapılmadı / bilinçli ertelendi
 
@@ -84,10 +136,21 @@ ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde 
    AB (Frankfurt) bölgesini seç (§13.2 KVKK notu). `.env`'i `docs/ENVIRONMENT.md`'ye
    göre doldur.
 
-2. **Paket 2 — Egzersiz veri seti** (§15): `scripts/seed-exercises.ts` yaz —
-   free-exercise-db'yi indir, `exercises`/`exercise_muscles`/`exercise_media`'ya
-   dönüştür, `name_tr`/`instructions_tr`/`cues_tr` alanlarını Claude API ile toplu
-   çevir (20 egzersiz/istek). `supabase/seed/` altına konabilir.
+2. **Paket 2'yi tamamla — çeviri + Supabase'e yazma** (script hazır, sadece
+   credential eksik):
+   ```bash
+   # .env'e ANTHROPIC_API_KEY, EXPO_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+   # eklendikten sonra (bkz. docs/ENVIRONMENT.md):
+   export $(grep -v '^#' .env | xargs)   # ya da dotenv-cli kullan
+   npm run seed:exercises
+   ```
+   Çeviri ~44 batch (876 egzersiz / 20) sürer, her batch sonrası
+   `scripts/seed-exercises/.cache/translations.json`'a kaydedilir — kesilirse
+   `npm run seed:exercises` tekrar çalıştırıldığında zaten çevrilmiş slug'ları atlar.
+   Adım 1 (migration'lar) bitmeden `write.ts` hata verir (tablolar yok), ama
+   `translate.ts` bağımsız çalışabilir. Rapordaki 156 "varsayılan side_delt"
+   egzersizi elle gözden geçirmeyi düşün (`mapping-report.json` →
+   `shoulderClassification.fallbackDefault`).
 
 3. **Auth akışını gerçek Supabase çağrılarına bağla** (Faz 0'ın kalanı): login/register
    ekranlarına `supabase.auth.*`, `useAuthStore`'u `onAuthStateChange` ile besle,

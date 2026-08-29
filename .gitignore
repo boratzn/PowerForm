@@ -30,8 +30,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (gerçek secret'lar buraya girer — bkz. docs/ENVIRONMENT.md)
+.env
+.env.local
 .env*.local
+
+# seed script'lerinin indirdiği/ürettiği ara veriler (yeniden üretilebilir)
+scripts/**/.cache/
 
 # typescript
 *.tsbuildinfo
