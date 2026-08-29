@@ -1,19 +1,44 @@
 import '../global.css';
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { db } from '../src/db/client';
+import migrations from '../src/db/migrations/migrations';
 import { seedLocalExercisesIfEmpty } from '../src/db/seedExercises';
 import { queryClient } from '../src/lib/queryClient';
 
 export default function RootLayout() {
+  // Yerel SQLite tabloları uygulama her açıldığında burada oluşturulur/güncellenir —
+  // drizzle-kit generate ile üretilen src/db/migrations/*.sql'i uygular (bkz. metro.config.js
+  // .sql import desteği). Migration bitmeden hiçbir ekran DB'ye erişmemeli.
+  const { success, error } = useMigrations(db, migrations);
+
   useEffect(() => {
+    if (!success) return;
     seedLocalExercisesIfEmpty().catch((err) => console.error('[RootLayout] Egzersiz seed hatası:', err));
-  }, []);
+  }, [success]);
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg-primary p-lg">
+        <Text className="text-center text-danger">Yerel veritabanı hazırlanamadı: {error.message}</Text>
+      </View>
+    );
+  }
+  if (!success) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg-primary">
+        <Text className="text-text-muted">Hazırlanıyor…</Text>
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

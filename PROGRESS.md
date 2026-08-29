@@ -19,11 +19,14 @@ ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde 
 Supabase'e henüz yazılmadı** (Supabase projesi kurulmadığı için — kullanıcı bu adımı
 bilinçli olarak sonraya bıraktı). Detaylar aşağıda.
 
-**Paket 3 (seans ekranı) — kod tamamen yazıldı, tsc + Metro bundle temiz geçiyor,
-ama HİÇ SİMÜLATÖRDE ÇALIŞTIRILMADI** (bu oturumda simülatör/cihaz açık değildi).
-Kullanıcının açık isteğiyle Supabase/Anthropic bağlantısı kurulmadı — ekran tamamen
-yerel SQLite üzerinde, "boş/ad-hoc seans" akışıyla çalışıyor (program bazlı başlatma
-henüz yok, program oluşturucu da yok). Detaylar aşağıda.
+**Paket 3 (seans ekranı) — YAZILDI VE GERÇEK BİR iOS SİMÜLATÖRÜNDE UÇTAN UCA
+DOĞRULANDI** (Expo Go üzerinden, iPhone 17 Pro / iOS 26.2 simülatörü). Kullanıcının
+açık isteğiyle Supabase/Anthropic bağlantısı kurulmadı — ekran tamamen yerel SQLite
+üzerinde, "boş/ad-hoc seans" akışıyla çalışıyor (program bazlı başlatma henüz yok,
+program oluşturucu da yok). Bu doğrulama sürecinde **3 gerçek bug bulundu ve
+düzeltildi** (Drizzle migration'ları hiç çalışmıyordu, .sql importu Metro'yu
+kırıyordu, kütüphane detay ekranı sekme çubuğunda fazladan bir sekme olarak
+görünüyordu) — detaylar aşağıda "Simülatör doğrulaması" bölümünde.
 
 ## Tamamlanan (Faz 0)
 
@@ -155,6 +158,39 @@ oluşturucu yazılınca eklenecek bir takip işi.
 | 7 | PR anında kutlama | ✅ `estimate1RM` karşılaştırması + `PRBadge` animasyonu |
 | 8 | Her şey geri alınabilir | ✅ Uzun basma → Düzenle/Sil (`Alert.alert`), onaylı seti "reopen" edebiliyorsun |
 
+## Simülatör doğrulaması (Paket 3)
+
+`xcrun simctl` ile sıfırdan bir iPhone 17 Pro / iOS 26.2 simülatörü oluşturulup Expo Go
+üzerinden gerçek bir uçtan uca akış koşuldu: sekme çubuğu → Antrenman → Seansı Başlat →
+egzersiz ara/ekle → KG/TEKRAR alanlarını özel klavyeyle doldur → seti onayla (PR rozeti +
+dinlenme sayacı + bildirim izni tetiklendi) → uzun bas → Düzenle/Sil menüsü → Bitir →
+onay diyaloğu → özet ("Süre: 6 dk, Hacim: 5445 kg, PR: 1") → workout sekmesine dönüş.
+Hepsi ekran görüntüleriyle doğrulandı, konsolda hata yok (sadece beklenen Expo Go
+push-notification kısıtlama uyarıları).
+
+**Bu süreçte bulunan ve düzeltilen 3 gerçek bug** (hiçbiri `tsc`/bundle ile yakalanamazdı —
+sadece gerçek çalıştırma ile ortaya çıktı):
+
+1. **Yerel SQLite tabloları hiç oluşturulmuyordu.** `src/db/client.ts` veritabanını
+   açıyordu ama migration hiç çalıştırılmıyordu — ilk ekran açılışında
+   `no such table: exercises` hatası. Düzeltme: `npx drizzle-kit generate` ile
+   `src/db/migrations/` üretildi, `app/_layout.tsx`'e `useMigrations` (drizzle-orm/
+   expo-sqlite/migrator) eklendi — migration bitene kadar bir "Hazırlanıyor…" ekranı
+   gösterip DB'ye erişimi engelliyor.
+2. **Metro `.sql` importunu JS olarak parse etmeye çalışıp çöküyordu.**
+   drizzle-kit'in ürettiği `migrations.js`, `.sql` dosyasını doğrudan import ediyor.
+   `metro.config.js`'e `sourceExts.push('sql')` eklemek yetmedi (Metro dosyayı JS
+   sanıp "Missing semicolon" hatası verdi) — asıl çözüm `babel.config.js`'e
+   `babel-plugin-inline-import` eklemek oldu (Drizzle'ın resmi Expo dokümantasyonundaki
+   yöntem: https://orm.drizzle.team/quick-sqlite/expo). Metro cache'i agresif şekilde
+   eskiyi tuttuğu için her config değişikliğinden sonra `--clear` + Expo Go'yu
+   `xcrun simctl terminate` ile tam kapatıp yeniden açmak gerekti.
+3. **Sekme çubuğunda fazladan "library/[exerciseId]" sekmesi çıkıyordu.** Dosya
+   tabanlı yönlendirme, `library/` altındaki `[exerciseId].tsx`'i kendi `_layout.tsx`'i
+   olmadığı için otomatik ayrı bir sekme olarak keşfediyordu. Düzeltme:
+   `app/(tabs)/_layout.tsx`'e `<Tabs.Screen name="library/[exerciseId]" options={{ href: null }} />`
+   eklendi (görünür ama sekme çubuğunda gizli).
+
 **Bilinen sınırlamalar:**
 - Sadece `tracking_type = 'weight_reps'` tam destekleniyor (38 egzersizin 37'si).
   `'time'`/`'distance'`/`'reps_only'` için ayrı bir giriş UI'ı yok — kg alanı boş
@@ -222,11 +258,8 @@ oluşturucu yazılınca eklenecek bir takip işi.
    `app/_layout.tsx`'e session'a göre `(auth)` ↔ `(tabs)` yönlendirmesi ekle.
    `useSessionStore`'daki `LOCAL_USER_ID` sabitini gerçek kullanıcı id'siyle değiştir.
 
-4. ~~Paket 3 — Seans ekranı~~ **YAPILDI** (bu oturumda) — kod tamam, ama simülatörde
-   hiç açılmadı. **Bir sonraki oturumun ilk işi: `npx expo start` ile gerçek bir
-   simülatörde aç, "Seansı Başlat" → egzersiz ekle → set logla → PR/dinlenme
-   sayacı/klavye gerçekten çalışıyor mu gözle doğrula.** Kod derleniyor olması UX'in
-   doğru olduğu anlamına gelmez.
+4. ~~Paket 3 — Seans ekranı~~ **YAPILDI VE SİMÜLATÖRDE DOĞRULANDI** (bu oturumda) —
+   bkz. "Simülatör doğrulaması" bölümü.
 
 5. **Paket 4 — AI katmanı** (§5, §8.2): `supabase/functions/ai-chat/` — Faz 0/1/2
    verisi olmadan anlamlı test edilemez, bu yüzden sona bırakıldı.
@@ -253,19 +286,20 @@ Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
 - [x] `expo-crypto`, `expo-notifications` doğru API şekilleriyle kullanıldı — kurulum
       sonrası `node_modules` içindeki gerçek `.d.ts` dosyaları okunarak doğrulandı
       (`SchedulableTriggerInputTypes.TIME_INTERVAL`, `shouldShowBanner`/`shouldShowList`).
+- [x] **Paket 3'ün tamamı gerçek bir iOS simülatöründe (Expo Go, iPhone 17 Pro /
+      iOS 26.2) uçtan uca test edildi** — bkz. "Simülatör doğrulaması" bölümü.
+      Tab bar, egzersiz arama, özel klavye, PR tespiti, dinlenme sayacı + bildirim
+      izni, uzun-basma menüsü, seans bitirme özeti — hepsi ekran görüntüleriyle
+      doğrulandı, konsol hatasız.
 
 ## Doğrulanmadı (bir sonraki oturumda ilk iş — ÖNCELİKLİ)
 
-- [ ] **Paket 3'ün tamamı simülatörde hiç açılmadı.** Bu oturumda simülatör/cihaz
-      yoktu — sadece `tsc` + Metro bundle doğrulaması yapıldı, bu UX'in doğru
-      çalıştığını KANITLAMAZ. Kontrol listesi: "Seansı Başlat" → egzersiz ekle
-      (arama çalışıyor mu) → KG/TEKRAR/RIR chip'lerine dokun (klavye açılıyor mu,
-      +2.5/-2.5/"aynısı" çalışıyor mu) → seti onayla (checkmark, dinlenme sayacı
-      başlıyor mu, titreşim) → uzun bas (düzenle/sil menüsü) → "Bitir" (özet doğru mu).
-- [ ] Gerçek bir simülatör/cihazda `npx expo start` ile görsel kontrol — NativeWind
-      stillerinin gerçekten uygulandığını, tab bar'ın ve modal'ın göründüğü şekilde
-      çalıştığını gözle doğrula (bu oturumda simülatör açılmadı, sadece headless
-      bundle doğrulaması yapıldı).
+- [ ] "Aynısı" (sameAsLast) butonu simülatör turunda hiç tıklanmadı — kod yolu var
+      (`NumericKeypad`'de koşullu render), ama gerçek dokunuşla denenmedi.
+- [ ] "+ Set Ekle" ile 2. seti eklemek, "Not Ekle" akışı (buton hâlâ yok, `ExerciseCard`'da
+      görsel eksik) ve `expo-keep-awake`'in gerçekten ekranı uyanık tuttuğu (simülatörde
+      gözlemlenemez, sadece fiziksel cihazda anlamlı) test edilmedi.
+- [ ] Android tarafı hiç denenmedi (sadece iOS simülatörü).
 - [ ] `supabase/migrations/*` dosyaları gerçek bir Postgres'e karşı `supabase db reset`
       ile temiz kurulum olarak çalışıyor mu (Paket 1'in istediği doğrulama — CLI kurulu
       olmadığı için bu oturumda koşulamadı, "Sıradaki adım" bölümüne bkz.)
@@ -281,3 +315,10 @@ Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
 - **Seans ekranı modal olarak `app/session.tsx`'te, `(tabs)/workout/` altında değil**:
   §11'in istediği "tam ekran, sekme çubuğu gizli" davranışı Expo Router'da en temiz
   şekilde root-level `presentation: 'fullScreenModal'` ile elde ediliyor.
+- **Egzersiz kütüphanesi Faz 0'da hiç yoktu, Paket 3'te eklendi**: seans ekranının
+  gerçek anlamda test edilebilmesi için (Supabase olmadan) `src/db/schema.ts`'e bir
+  yerel `exercises` aynası + `src/db/seed-data/exercises.json`'dan bundle-seed eklendi.
+  Bu bilinçli bir kapsam genişlemesiydi — Supabase bağlanana kadar geçici.
+- **Drizzle migration'ları `babel-plugin-inline-import` ile**, Metro `sourceExts`
+  tek başına yetmiyor (dosyayı JS olarak parse etmeye çalışıp çöküyor) — Drizzle'ın
+  resmi Expo dokümantasyonundaki yöntem bu, bkz. "Simülatör doğrulaması" bölümü.

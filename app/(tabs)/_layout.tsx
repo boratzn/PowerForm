@@ -35,6 +35,9 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="library-outline" color={color} size={size} />,
         }}
       />
+      {/* library/[exerciseId] bir detay ekranı — dosya tabanlı yönlendirme onu otomatik
+          bir sekme olarak keşfeder, href:null ile sekme çubuğundan gizleniyor. */}
+      <Tabs.Screen name="library/[exerciseId]" options={{ href: null }} />
       <Tabs.Screen
         name="nutrition"
         options={{
