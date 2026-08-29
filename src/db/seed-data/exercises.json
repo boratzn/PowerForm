@@ -1,0 +1,306 @@
+[
+  {
+    "id": "barbell-squat",
+    "slug": "barbell-squat",
+    "name_en": "Barbell Squat",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "romanian-deadlift",
+    "slug": "romanian-deadlift",
+    "name_en": "Romanian Deadlift",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "leg-press",
+    "slug": "leg-press",
+    "name_en": "Leg Press",
+    "name_tr": null,
+    "equipment": "machine",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "rocking-standing-calf-raise",
+    "slug": "rocking-standing-calf-raise",
+    "name_en": "Rocking Standing Calf Raise",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "seated-leg-curl",
+    "slug": "seated-leg-curl",
+    "name_en": "Seated Leg Curl",
+    "name_tr": null,
+    "equipment": "machine",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "leg-extensions",
+    "slug": "leg-extensions",
+    "name_en": "Leg Extensions",
+    "name_tr": null,
+    "equipment": "machine",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-bench-press-medium-grip",
+    "slug": "barbell-bench-press-medium-grip",
+    "name_en": "Barbell Bench Press - Medium Grip",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "incline-dumbbell-press",
+    "slug": "incline-dumbbell-press",
+    "name_en": "Incline Dumbbell Press",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "dumbbell-flyes",
+    "slug": "dumbbell-flyes",
+    "name_en": "Dumbbell Flyes",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "cable-crossover",
+    "slug": "cable-crossover",
+    "name_en": "Cable Crossover",
+    "name_tr": null,
+    "equipment": "cable",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "pushups",
+    "slug": "pushups",
+    "name_en": "Pushups",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-shoulder-press",
+    "slug": "barbell-shoulder-press",
+    "name_en": "Barbell Shoulder Press",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "dumbbell-shoulder-press",
+    "slug": "dumbbell-shoulder-press",
+    "name_en": "Dumbbell Shoulder Press",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "side-lateral-raise",
+    "slug": "side-lateral-raise",
+    "name_en": "Side Lateral Raise",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "dumbbell-lying-rear-lateral-raise",
+    "slug": "dumbbell-lying-rear-lateral-raise",
+    "name_en": "Dumbbell Lying Rear Lateral Raise",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "face-pull",
+    "slug": "face-pull",
+    "name_en": "Face Pull",
+    "name_tr": null,
+    "equipment": "cable",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-shrug",
+    "slug": "barbell-shrug",
+    "name_en": "Barbell Shrug",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "wide-grip-lat-pulldown",
+    "slug": "wide-grip-lat-pulldown",
+    "name_en": "Wide-Grip Lat Pulldown",
+    "name_tr": null,
+    "equipment": "cable",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "seated-cable-rows",
+    "slug": "seated-cable-rows",
+    "name_en": "Seated Cable Rows",
+    "name_tr": null,
+    "equipment": "cable",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "bent-over-barbell-row",
+    "slug": "bent-over-barbell-row",
+    "name_en": "Bent Over Barbell Row",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "pullups",
+    "slug": "pullups",
+    "name_en": "Pullups",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-curl",
+    "slug": "barbell-curl",
+    "name_en": "Barbell Curl",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "dumbbell-bicep-curl",
+    "slug": "dumbbell-bicep-curl",
+    "name_en": "Dumbbell Bicep Curl",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "hammer-curls",
+    "slug": "hammer-curls",
+    "name_en": "Hammer Curls",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "triceps-pushdown",
+    "slug": "triceps-pushdown",
+    "name_en": "Triceps Pushdown",
+    "name_tr": null,
+    "equipment": "cable",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "close-grip-barbell-bench-press",
+    "slug": "close-grip-barbell-bench-press",
+    "name_en": "Close-Grip Barbell Bench Press",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "crunches",
+    "slug": "crunches",
+    "name_en": "Crunches",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "plank",
+    "slug": "plank",
+    "name_en": "Plank",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "time"
+  },
+  {
+    "id": "hanging-leg-raise",
+    "slug": "hanging-leg-raise",
+    "name_en": "Hanging Leg Raise",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "russian-twist",
+    "slug": "russian-twist",
+    "name_en": "Russian Twist",
+    "name_tr": null,
+    "equipment": "bodyweight",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "dumbbell-lunges",
+    "slug": "dumbbell-lunges",
+    "name_en": "Dumbbell Lunges",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "goblet-squat",
+    "slug": "goblet-squat",
+    "name_en": "Goblet Squat",
+    "name_tr": null,
+    "equipment": "kettlebell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-hip-thrust",
+    "slug": "barbell-hip-thrust",
+    "name_en": "Barbell Hip Thrust",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "barbell-glute-bridge",
+    "slug": "barbell-glute-bridge",
+    "name_en": "Barbell Glute Bridge",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "machine-bicep-curl",
+    "slug": "machine-bicep-curl",
+    "name_en": "Machine Bicep Curl",
+    "name_tr": null,
+    "equipment": "machine",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "preacher-curl",
+    "slug": "preacher-curl",
+    "name_en": "Preacher Curl",
+    "name_tr": null,
+    "equipment": "barbell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "kettlebell-arnold-press",
+    "slug": "kettlebell-arnold-press",
+    "name_en": "Kettlebell Arnold Press",
+    "name_tr": null,
+    "equipment": "kettlebell",
+    "tracking_type": "weight_reps"
+  },
+  {
+    "id": "reverse-flyes",
+    "slug": "reverse-flyes",
+    "name_en": "Reverse Flyes",
+    "name_tr": null,
+    "equipment": "dumbbell",
+    "tracking_type": "weight_reps"
+  }
+]

@@ -19,6 +19,12 @@ ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde 
 Supabase'e henüz yazılmadı** (Supabase projesi kurulmadığı için — kullanıcı bu adımı
 bilinçli olarak sonraya bıraktı). Detaylar aşağıda.
 
+**Paket 3 (seans ekranı) — kod tamamen yazıldı, tsc + Metro bundle temiz geçiyor,
+ama HİÇ SİMÜLATÖRDE ÇALIŞTIRILMADI** (bu oturumda simülatör/cihaz açık değildi).
+Kullanıcının açık isteğiyle Supabase/Anthropic bağlantısı kurulmadı — ekran tamamen
+yerel SQLite üzerinde, "boş/ad-hoc seans" akışıyla çalışıyor (program bazlı başlatma
+henüz yok, program oluşturucu da yok). Detaylar aşağıda.
+
 ## Tamamlanan (Faz 0)
 
 - [x] Expo + TypeScript + Expo Router kurulumu (`create-expo-app` blank-typescript,
@@ -100,6 +106,65 @@ jsdelivr CDN üzerinden egzersiz görselleri doğrulandı (`curl -I` → 200,
 **Bu oturumda YAPILMADI:** çeviri (ANTHROPIC_API_KEY yok) ve Supabase'e yazma
 (Supabase projesi yok) — ikisi de kullanıcının bilinçli tercihiyle sonraya bırakıldı.
 
+## Tamamlanan (Paket 3 — seans ekranı)
+
+Mimari karar: program oluşturucu henüz yok, bu yüzden seans **boş/ad-hoc** başlıyor
+(Hevy/Strong'daki "Start Empty Workout" gibi) — kullanıcı egzersizleri elle ekliyor.
+Programa bağlı seans başlatma (aktif günün hedeflerini otomatik yükleme) program
+oluşturucu yazılınca eklenecek bir takip işi.
+
+- [x] `src/db/schema.ts` — yerel `exercises` tablosu eklendi (kütüphanenin salt-okunur
+      aynası; Supabase bağlanana kadar `id = slug`, bkz. dosyadaki yorum)
+- [x] `src/db/seed-data/exercises.json` — Paket 2'nin gerçek çıktısından elle seçilmiş
+      38 egzersiz (tüm ana kas grupları + ekipman tipleri), `src/db/seedExercises.ts`
+      ile uygulama ilk açıldığında bir kereliğine yerel DB'ye yazılıyor
+      (`app/_layout.tsx`'te çağrılıyor) — GEÇİCİ, gerçek Supabase senkronu gelince
+      kaldırılacak
+- [x] `src/lib/calculations.ts` — `estimate1RM` (§9.1'deki RIR-düzeltmeli formül,
+      sunucunun generated column'ındaki basit Epley'den BİLİNÇLİ olarak farklı — dosyada
+      neden açıklanıyor), `calculateVolume`, `roundToPlate`. Saf fonksiyonlar (§16.3)
+- [x] `src/lib/uuid.ts` — `expo-crypto` tabanlı UUID üretimi (Hermes'te global
+      `crypto.randomUUID` yok)
+- [x] `src/lib/restNotification.ts` — dinlenme sayacı bitince arka planda da tetiklenen
+      yerel bildirim (`expo-notifications`, izin isteme + Android kanalı dahil)
+- [x] `src/db/mutations.ts` — `recordMutation()`, §12.4 senkron kuyruğuna her yerel
+      yazma için kayıt düşer (henüz işleyen bir senkron motoru yok ama mimari baştan
+      doğru — motor eklenince bu tablo hazır)
+- [x] `src/db/queries.ts` — `getLastPerformance` ("geçen sefer" placeholder verisi),
+      `getBestE1RM` (PR karşılaştırması), `searchLocalExercises`
+- [x] `src/stores/useSessionStore.ts` — aktif seans state'i (Zustand). Her mutasyon
+      (set onayı, silme, seans bitişi) ÖNCE yerel SQLite'a yazılıyor, sonra bellek
+      state'i güncelleniyor — uygulama seans ortasında çökerse veri kaybolmaz
+- [x] `src/components/session/`: `NumericKeypad` (özel sayı klavyesi, +2.5/-2.5,
+      "aynısı"), `SetRow` (uzun basma → düzenle/sil), `ExerciseCard`, `RestTimerBar`,
+      `ExercisePickerSheet`, `PRBadge` (Reanimated animasyonlu)
+- [x] `app/session.tsx` — tam implementasyon: süre sayacı, toplam hacim, tamamlanan/
+      toplam set, dinlenme sayacı otomatik başlatma + titreşim + arka plan bildirimi,
+      seans bitirme özeti (Alert)
+
+**§10.2'nin 8 zorunlu kuralı ile karşılaştırma:**
+
+| # | Kural | Durum |
+|---|---|---|
+| 1 | Tek elle erişilebilirlik (alt 2/3) | ✅ Klavye/dinlenme barı ekranın altında; "Bitir" üst köşede ama nadir/onaylı bir eylem |
+| 2 | Min 48×48dp dokunma hedefi | ✅ Tüm chip/buton/checkmark `min-h-[48px]` veya `h-12`/`w-12` |
+| 3 | Geçen seferki değer önceden dolu | ✅ `lastPerformance`'tan hem kg hem tekrar hem RIR önceden dolduruluyor |
+| 4 | Özel numerik klavye | ✅ `NumericKeypad` — sistem klavyesi hiç kullanılmıyor |
+| 5 | Dinlenme sayacı otomatik + titreşim + arka plan bildirimi | ✅ `confirmSet` başlatıyor, `Vibration.vibrate`, `expo-notifications` |
+| 6 | Ekran uyanık kalsın | ✅ `useKeepAwake()` (Faz 0'dan beri kuruluydu) |
+| 7 | PR anında kutlama | ✅ `estimate1RM` karşılaştırması + `PRBadge` animasyonu |
+| 8 | Her şey geri alınabilir | ✅ Uzun basma → Düzenle/Sil (`Alert.alert`), onaylı seti "reopen" edebiliyorsun |
+
+**Bilinen sınırlamalar:**
+- Sadece `tracking_type = 'weight_reps'` tam destekleniyor (38 egzersizin 37'si).
+  `'time'`/`'distance'`/`'reps_only'` için ayrı bir giriş UI'ı yok — kg alanı boş
+  bırakılabiliyor ama süre/mesafe için özel bir widget yazılmadı.
+- Uygulama seans ortasında kapanıp yeniden açılırsa, DB'de `in_progress` bir seans
+  kalır ama ekran onu otomatik algılayıp geri açmıyor (state Zustand'da, kalıcı değil).
+  "Devam eden seansı algıla" bir sonraki iterasyon işi.
+- `LOCAL_USER_ID` sabit bir placeholder (`'local-user'`) — auth bağlanınca gerçek
+  `supabase.auth` kullanıcı id'siyle değişecek.
+
 ## Yapılmadı / bilinçli ertelendi
 
 - [ ] **`.env` dosyası yok.** Bu oturum `turax` workspace'i içinde çalıştığı için o
@@ -155,28 +220,48 @@ jsdelivr CDN üzerinden egzersiz görselleri doğrulandı (`curl -I` → 200,
 3. **Auth akışını gerçek Supabase çağrılarına bağla** (Faz 0'ın kalanı): login/register
    ekranlarına `supabase.auth.*`, `useAuthStore`'u `onAuthStateChange` ile besle,
    `app/_layout.tsx`'e session'a göre `(auth)` ↔ `(tabs)` yönlendirmesi ekle.
+   `useSessionStore`'daki `LOCAL_USER_ID` sabitini gerçek kullanıcı id'siyle değiştir.
 
-4. **Paket 3 — Seans ekranı** (§10.2, §11): uygulamanın en kritik ekranı, ayrı ve
-   dikkatli bir görev paketi olarak ele alınmalı — özel numerik klavye, geçen seferki
-   placeholder, dinlenme sayacı, PR kutlaması, önce yerel SQLite'a yaz.
+4. ~~Paket 3 — Seans ekranı~~ **YAPILDI** (bu oturumda) — kod tamam, ama simülatörde
+   hiç açılmadı. **Bir sonraki oturumun ilk işi: `npx expo start` ile gerçek bir
+   simülatörde aç, "Seansı Başlat" → egzersiz ekle → set logla → PR/dinlenme
+   sayacı/klavye gerçekten çalışıyor mu gözle doğrula.** Kod derleniyor olması UX'in
+   doğru olduğu anlamına gelmez.
 
 5. **Paket 4 — AI katmanı** (§5, §8.2): `supabase/functions/ai-chat/` — Faz 0/1/2
    verisi olmadan anlamlı test edilemez, bu yüzden sona bırakıldı.
+
+6. **Program oluşturucu** (F4, henüz bir "Paket" olarak tanımlanmadı ama Paket 3'ün
+   ortaya çıkardığı bağımlılık): seans ekranı şu an sadece boş/ad-hoc başlıyor;
+   programa bağlı başlatma (hedef set/tekrar/RIR/dinlenme otomatik yüklensin) için
+   önce `program_days`/`program_exercises`'ın yerel bir aynası ve program düzenleme
+   UI'ı gerekiyor.
 
 Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
 
 ## Doğrulandı
 
-- [x] `npx tsc --noEmit -p tsconfig.json` hatasız geçiyor (strict mode)
-- [x] `npx expo export --platform ios` 1719 modülü hatasız bundle'lıyor — Metro +
-      Babel (nativewind/babel, react-native-reanimated/plugin → react-native-worklets)
-      + Expo Router zinciri çalışıyor. Bunun için ek düzeltmeler gerekti:
-      `@expo/vector-icons` ve `react-native-worklets` açıkça kuruldu (ilki hiç
-      kurulu değildi, ikincisi Reanimated 4.x'in babel plugin'inin peer bağımlılığı),
-      `nativewind-env.d.ts` eklendi (`className` prop tipi + `*.css` import tipi için).
+- [x] `npx tsc --noEmit -p tsconfig.json` hatasız geçiyor (strict mode) — Faz 0 +
+      Paket 2 + Paket 3'ün tamamı dahil
+- [x] `npx expo export --platform ios` hatasız bundle'lıyor (Faz 0'da 1719 modül,
+      Paket 3 sonrası 1946 modül) — Metro + Babel (nativewind/babel,
+      react-native-reanimated/plugin → react-native-worklets) + Expo Router zinciri
+      çalışıyor. Bunun için ek düzeltmeler gerekti: `@expo/vector-icons` ve
+      `react-native-worklets` açıkça kuruldu (ilki hiç kurulu değildi, ikincisi
+      Reanimated 4.x'in babel plugin'inin peer bağımlılığı), `nativewind-env.d.ts`
+      eklendi (`className` prop tipi + `*.css` import tipi için).
+- [x] `expo-crypto`, `expo-notifications` doğru API şekilleriyle kullanıldı — kurulum
+      sonrası `node_modules` içindeki gerçek `.d.ts` dosyaları okunarak doğrulandı
+      (`SchedulableTriggerInputTypes.TIME_INTERVAL`, `shouldShowBanner`/`shouldShowList`).
 
-## Doğrulanmadı (bir sonraki oturumda ilk iş)
+## Doğrulanmadı (bir sonraki oturumda ilk iş — ÖNCELİKLİ)
 
+- [ ] **Paket 3'ün tamamı simülatörde hiç açılmadı.** Bu oturumda simülatör/cihaz
+      yoktu — sadece `tsc` + Metro bundle doğrulaması yapıldı, bu UX'in doğru
+      çalıştığını KANITLAMAZ. Kontrol listesi: "Seansı Başlat" → egzersiz ekle
+      (arama çalışıyor mu) → KG/TEKRAR/RIR chip'lerine dokun (klavye açılıyor mu,
+      +2.5/-2.5/"aynısı" çalışıyor mu) → seti onayla (checkmark, dinlenme sayacı
+      başlıyor mu, titreşim) → uzun bas (düzenle/sil menüsü) → "Bitir" (özet doğru mu).
 - [ ] Gerçek bir simülatör/cihazda `npx expo start` ile görsel kontrol — NativeWind
       stillerinin gerçekten uygulandığını, tab bar'ın ve modal'ın göründüğü şekilde
       çalıştığını gözle doğrula (bu oturumda simülatör açılmadı, sadece headless

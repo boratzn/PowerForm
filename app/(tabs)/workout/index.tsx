@@ -25,7 +25,8 @@ export default function WorkoutScreen() {
       <Card>
         <Text className="text-base text-text-muted">Şablon galerisi ve program düzenleyici</Text>
         <Text className="mt-xs text-xs text-text-muted">
-          Faz 1 kapsamı — bkz. PROGRESS.md "Paket 3: Seans ekranı" öncesi program oluşturucu işi.
+          Faz 1 kapsamı — henüz yok. "Seansı Başlat" şimdilik boş/ad-hoc bir seans açar
+          (egzersizleri elle ekleyip loglayabilirsin), programa bağlı akış değil.
         </Text>
       </Card>
     </ScrollView>

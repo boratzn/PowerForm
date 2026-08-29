@@ -5,6 +5,24 @@ import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 // UI hiçbir zaman doğrudan ağdan okumaz, her zaman bu tablolardan okur.
 // Sunucu şeması (supabase/migrations) ile 1:1 değil; senkron motoru ikisini eşler.
 
+// Egzersiz kütüphanesinin salt-okunur yerel aynası. Supabase henüz bağlanmadığı için
+// (bkz. PROGRESS.md) `id` = `slug` — gerçek Supabase senkronu geldiğinde exercises.id
+// (uuid) ile slug üzerinden eşlenip bu tablo yeniden doldurulacak; session_exercises'taki
+// exerciseId referansları slug-stabil olduğu için kırılmaz. Şimdilik db/seed-data/exercises.json
+// bundle'ından tek seferlik seed ediliyor (bkz. seedExercises.ts).
+export const exercises = sqliteTable('exercises', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  nameEn: text('name_en').notNull(),
+  nameTr: text('name_tr'),
+  equipment: text('equipment').notNull(),
+  trackingType: text('tracking_type', {
+    enum: ['weight_reps', 'reps_only', 'time', 'distance', 'weighted_bodyweight'],
+  })
+    .notNull()
+    .default('weight_reps'),
+});
+
 export const workoutSessions = sqliteTable('workout_sessions', {
   clientUuid: text('client_uuid').primaryKey(), // sunucudaki client_uuid UNIQUE ile eşleşir
   serverId: text('server_id'), // senkron olunca dolar
