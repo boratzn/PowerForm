@@ -102,15 +102,25 @@ ekran seans modalı) çalışır durumda ama ekranların içi büyük ölçüde 
 
 Faz 1-5'in tam kapsamı için `docs/FITNESS_APP_SPEC.md` §14'e bak.
 
+## Doğrulandı
+
+- [x] `npx tsc --noEmit -p tsconfig.json` hatasız geçiyor (strict mode)
+- [x] `npx expo export --platform ios` 1719 modülü hatasız bundle'lıyor — Metro +
+      Babel (nativewind/babel, react-native-reanimated/plugin → react-native-worklets)
+      + Expo Router zinciri çalışıyor. Bunun için ek düzeltmeler gerekti:
+      `@expo/vector-icons` ve `react-native-worklets` açıkça kuruldu (ilki hiç
+      kurulu değildi, ikincisi Reanimated 4.x'in babel plugin'inin peer bağımlılığı),
+      `nativewind-env.d.ts` eklendi (`className` prop tipi + `*.css` import tipi için).
+
 ## Doğrulanmadı (bir sonraki oturumda ilk iş)
 
-- [ ] `npx tsc --noEmit` hatasız geçiyor mu
-- [ ] `npx expo start` ile Metro bundler hatasız açılıyor mu, NativeWind stilleri
-      gerçekten uygulanıyor mu (bir cihaz/simülatör gerekiyor — bu oturumda mevcut
-      değildi)
+- [ ] Gerçek bir simülatör/cihazda `npx expo start` ile görsel kontrol — NativeWind
+      stillerinin gerçekten uygulandığını, tab bar'ın ve modal'ın göründüğü şekilde
+      çalıştığını gözle doğrula (bu oturumda simülatör açılmadı, sadece headless
+      bundle doğrulaması yapıldı).
 - [ ] `supabase/migrations/*` dosyaları gerçek bir Postgres'e karşı `supabase db reset`
       ile temiz kurulum olarak çalışıyor mu (Paket 1'in istediği doğrulama — CLI kurulu
-      olmadığı için bu oturumda koşulamadı)
+      olmadığı için bu oturumda koşulamadı, "Sıradaki adım" bölümüne bkz.)
 
 ## Bilinen kararlar / neden
 
