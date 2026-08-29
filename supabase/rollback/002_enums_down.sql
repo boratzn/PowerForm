@@ -1,0 +1,13 @@
+DROP TYPE IF EXISTS program_status;
+DROP TYPE IF EXISTS agent_type;
+DROP TYPE IF EXISTS message_role;
+DROP TYPE IF EXISTS meal_type;
+DROP TYPE IF EXISTS session_status;
+DROP TYPE IF EXISTS set_type;
+DROP TYPE IF EXISTS mechanic_type;
+DROP TYPE IF EXISTS force_type;
+DROP TYPE IF EXISTS equipment_type;
+DROP TYPE IF EXISTS unit_system;
+DROP TYPE IF EXISTS goal_type;
+DROP TYPE IF EXISTS experience_level;
+DROP TYPE IF EXISTS sex_type;
