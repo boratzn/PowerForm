@@ -1,12 +1,13 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { create } from 'zustand';
 
 import { calculateVolume, estimate1RM } from '../lib/calculations';
 import { generateUuid } from '../lib/uuid';
 import { db } from '../db/client';
 import { recordMutation } from '../db/mutations';
-import { getBestE1RM, getLastPerformance, type LocalExercise } from '../db/queries';
+import { getBestE1RM, getExerciseById, getLastPerformance, type LocalExercise } from '../db/queries';
 import { sessionExercises, sessionSets, workoutSessions } from '../db/schema';
+import { drainSyncQueue } from '../db/syncEngine';
 import { useAuthStore } from './useAuthStore';
 
 const DEFAULT_REST_SECONDS = 90;
@@ -39,15 +40,33 @@ type RestTimerState = {
   totalSeconds: number;
 };
 
+export type InitialExerciseInput = {
+  exerciseId: string;
+  targetSets: number;
+  targetRir?: number | null;
+  repMin?: number | null;
+  repMax?: number | null;
+  restSeconds?: number | null;
+};
+
+export type StartSessionOptions = {
+  programId?: string;
+  programDayId?: string;
+  initialExercises?: InitialExerciseInput[];
+};
+
 type SessionState = {
   sessionClientUuid: string | null;
   startedAt: number | null;
   exercises: ActiveExercise[];
   restTimer: RestTimerState;
 
-  startSession: () => Promise<void>;
+  startSession: (opts?: StartSessionOptions) => Promise<void>;
+  hydrateActiveSession: () => Promise<void>;
+  resumeOrStartSession: (opts?: StartSessionOptions) => Promise<void>;
   addExercise: (exercise: LocalExercise) => Promise<void>;
   removeExercise: (exerciseClientUuid: string) => void;
+  updateExerciseNotes: (exerciseClientUuid: string, notes: string) => Promise<void>;
   addSet: (exerciseClientUuid: string) => void;
   updateDraftSet: (
     exerciseClientUuid: string,
@@ -74,7 +93,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   // §12: yerel yazma önce SQLite'a, DB satırı seans başlar başlamaz oluşur —
   // uygulama seans ortasında kapanırsa/çökerse veri kaybolmaz.
-  startSession: async () => {
+  startSession: async (opts?: StartSessionOptions) => {
     const userId = useAuthStore.getState().session?.user.id;
     if (!userId) throw new Error('startSession: aktif oturum yok');
 
@@ -83,11 +102,158 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await db.insert(workoutSessions).values({
       clientUuid,
       userId,
+      programId: opts?.programId ?? null,
+      programDayId: opts?.programDayId ?? null,
       status: 'in_progress',
       startedAt,
     });
-    await recordMutation('workout_sessions', 'insert', { client_uuid: clientUuid, started_at: startedAt });
-    set({ sessionClientUuid: clientUuid, startedAt, exercises: [], restTimer: initialRestTimer });
+    await recordMutation('workout_sessions', 'insert', {
+      client_uuid: clientUuid,
+      program_id: opts?.programId ?? null,
+      program_day_id: opts?.programDayId ?? null,
+      started_at: startedAt,
+    });
+
+    const activeExercises: ActiveExercise[] = [];
+    if (opts?.initialExercises && opts.initialExercises.length > 0) {
+      for (let orderIndex = 0; orderIndex < opts.initialExercises.length; orderIndex++) {
+        const item = opts.initialExercises[orderIndex];
+        const exerciseMeta = await getExerciseById(item.exerciseId);
+        if (!exerciseMeta) continue;
+
+        const exClientUuid = generateUuid();
+        await db.insert(sessionExercises).values({
+          clientUuid: exClientUuid,
+          sessionClientUuid: clientUuid,
+          exerciseId: exerciseMeta.id,
+          orderIndex,
+        });
+        await recordMutation('session_exercises', 'insert', {
+          client_uuid: exClientUuid,
+          session_client_uuid: clientUuid,
+          exercise_id: exerciseMeta.id,
+          order_index: orderIndex,
+        });
+
+        const [lastPerformance, bestE1RM] = await Promise.all([
+          getLastPerformance(exerciseMeta.id),
+          getBestE1RM(exerciseMeta.id),
+        ]);
+
+        const setCount = Math.max(1, item.targetSets);
+        const sets: ActiveSet[] = [];
+        for (let sIdx = 0; sIdx < setCount; sIdx++) {
+          const past = lastPerformance[sIdx];
+          sets.push({
+            clientUuid: generateUuid(),
+            setIndex: sIdx + 1,
+            weightKg: past?.weightKg ?? null,
+            reps: past?.reps ?? (item.repMin ?? item.repMax ?? null),
+            rir: past?.rir ?? (item.targetRir ?? null),
+            isCompleted: false,
+            isPr: false,
+          });
+        }
+
+        activeExercises.push({
+          clientUuid: exClientUuid,
+          exerciseId: exerciseMeta.id,
+          nameEn: exerciseMeta.nameEn,
+          nameTr: exerciseMeta.nameTr,
+          trackingType: exerciseMeta.trackingType,
+          notes: '',
+          sets,
+          lastPerformance,
+          runningBestE1RM: bestE1RM,
+        });
+      }
+    }
+
+    set({ sessionClientUuid: clientUuid, startedAt, exercises: activeExercises, restTimer: initialRestTimer });
+  },
+
+  // Uygulama öldürülüp yeniden açılırsa (ör. bildirim, işletim sistemi arka plan
+  // temizliği) yarım kalan bir seans DB'de `status='in_progress'` olarak kalır ama bu
+  // store'un in-memory state'i sıfırlanmış olur — bu fonksiyon o satırı bulup store'u
+  // ondan yeniden kurar. Zaten aktif bir seans varsa (get().sessionClientUuid dolu)
+  // dokunmadan çıkar — aksi halde bu seansın kendi `isPr` bayraklarını (DB'de hiç
+  // saklanmıyor, bkz. ActiveSet) sıfırlayarak üzerine yazardı.
+  hydrateActiveSession: async () => {
+    if (get().sessionClientUuid) return;
+
+    const userId = useAuthStore.getState().session?.user.id;
+    if (!userId) return;
+
+    const activeRows = await db
+      .select()
+      .from(workoutSessions)
+      .where(and(eq(workoutSessions.userId, userId), eq(workoutSessions.status, 'in_progress')))
+      .orderBy(desc(workoutSessions.startedAt))
+      .limit(1);
+    const activeSession = activeRows[0];
+    if (!activeSession) return;
+
+    const exerciseRows = await db
+      .select()
+      .from(sessionExercises)
+      .where(eq(sessionExercises.sessionClientUuid, activeSession.clientUuid))
+      .orderBy(sessionExercises.orderIndex);
+
+    const hydratedExercises: ActiveExercise[] = [];
+    for (const exRow of exerciseRows) {
+      const exerciseMeta = await getExerciseById(exRow.exerciseId);
+      // Egzersiz senkron sırasında id değiştiyse (bkz. syncExercises.ts, slug üzerinden
+      // upsert) eski id artık hiçbir satıra karşılık gelmeyebilir — bu satırı atla,
+      // kullanıcı elle yeniden ekleyebilir.
+      if (!exerciseMeta) continue;
+
+      const setRows = await db
+        .select()
+        .from(sessionSets)
+        .where(eq(sessionSets.sessionExerciseClientUuid, exRow.clientUuid))
+        .orderBy(sessionSets.setIndex);
+
+      const [lastPerformance, bestE1RM] = await Promise.all([
+        getLastPerformance(exRow.exerciseId),
+        getBestE1RM(exRow.exerciseId),
+      ]);
+
+      hydratedExercises.push({
+        clientUuid: exRow.clientUuid,
+        exerciseId: exRow.exerciseId,
+        nameEn: exerciseMeta.nameEn,
+        nameTr: exerciseMeta.nameTr,
+        trackingType: exerciseMeta.trackingType,
+        notes: exRow.notes ?? '',
+        sets: setRows.map((s) => ({
+          clientUuid: s.clientUuid,
+          setIndex: s.setIndex,
+          weightKg: s.weightKg,
+          reps: s.reps,
+          rir: s.rir,
+          isCompleted: s.isCompleted,
+          // Geçmişe dönük PR rozeti yeniden hesaplanmıyor (isCompleted set'lerin PR
+          // olup olmadığı DB'de saklanmıyor) — sadece bu oturumda ONAYLANACAK yeni
+          // setler için doğru şekilde işaretlenir (runningBestE1RM zaten güncel).
+          isPr: false,
+        })),
+        lastPerformance,
+        runningBestE1RM: bestE1RM,
+      });
+    }
+
+    const currentRest = get().restTimer;
+    set({
+      sessionClientUuid: activeSession.clientUuid,
+      startedAt: activeSession.startedAt,
+      exercises: hydratedExercises,
+      restTimer: currentRest.isRunning ? currentRest : initialRestTimer,
+    });
+  },
+
+  resumeOrStartSession: async (opts?: StartSessionOptions) => {
+    await get().hydrateActiveSession();
+    if (!get().sessionClientUuid) await get().startSession(opts);
   },
 
   addExercise: async (exercise) => {
@@ -148,6 +314,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // "boş" bir egzersiz kartı kalması, sessizce veri kaybından daha güvenli bir varsayılan.
   },
 
+  updateExerciseNotes: async (exerciseClientUuid, notes) => {
+    set({
+      exercises: get().exercises.map((ex) =>
+        ex.clientUuid === exerciseClientUuid ? { ...ex, notes } : ex
+      ),
+    });
+
+    try {
+      await db
+        .update(sessionExercises)
+        .set({ notes })
+        .where(eq(sessionExercises.clientUuid, exerciseClientUuid));
+    } catch (err) {
+      console.error('[useSessionStore] updateExerciseNotes DB hatası:', err);
+    }
+  },
+
   addSet: (exerciseClientUuid) => {
     set({
       exercises: get().exercises.map((ex) => {
@@ -197,16 +380,27 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const e1rm = estimate1RM(draftSet.weightKg ?? 0, draftSet.reps, draftSet.rir);
     const isPr = e1rm > exercise.runningBestE1RM && e1rm > 0;
 
-    await db.insert(sessionSets).values({
-      clientUuid: draftSet.clientUuid,
-      sessionExerciseClientUuid: exercise.clientUuid,
-      setIndex: draftSet.setIndex,
-      setType: 'normal',
-      weightKg: draftSet.weightKg,
-      reps: draftSet.reps,
-      rir: draftSet.rir,
-      isCompleted: true,
-    });
+    await db
+      .insert(sessionSets)
+      .values({
+        clientUuid: draftSet.clientUuid,
+        sessionExerciseClientUuid: exercise.clientUuid,
+        setIndex: draftSet.setIndex,
+        setType: 'normal',
+        weightKg: draftSet.weightKg,
+        reps: draftSet.reps,
+        rir: draftSet.rir,
+        isCompleted: true,
+      })
+      .onConflictDoUpdate({
+        target: sessionSets.clientUuid,
+        set: {
+          weightKg: draftSet.weightKg,
+          reps: draftSet.reps,
+          rir: draftSet.rir,
+          isCompleted: true,
+        },
+      });
     await recordMutation('session_sets', 'insert', {
       client_uuid: draftSet.clientUuid,
       session_exercise_client_uuid: exercise.clientUuid,
@@ -233,6 +427,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   // §10.2 kural 8: her şey geri alınabilir. Uzun basma bunu tetikler (bkz. SetRow.tsx).
   reopenSet: (exerciseClientUuid, setClientUuid) => {
+    db.update(sessionSets)
+      .set({ isCompleted: false })
+      .where(eq(sessionSets.clientUuid, setClientUuid))
+      .catch(() => {});
     set({
       exercises: get().exercises.map((ex) =>
         ex.clientUuid !== exerciseClientUuid
@@ -279,6 +477,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const endedAt = Math.floor(Date.now() / 1000);
     await db.update(workoutSessions).set({ status: 'completed', endedAt }).where(eq(workoutSessions.clientUuid, sessionClientUuid));
     await recordMutation('workout_sessions', 'update', { client_uuid: sessionClientUuid, status: 'completed', ended_at: endedAt });
+
+    // Arka planda senkronu tetikle
+    drainSyncQueue().catch((err) => console.warn('[useSessionStore] Senkron hatası:', err));
 
     let totalVolumeKg = 0;
     let prCount = 0;

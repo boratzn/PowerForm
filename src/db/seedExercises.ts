@@ -1,25 +1,53 @@
+import { sql } from 'drizzle-orm';
+
 import { db } from './client';
 import { exercises } from './schema';
 import seedData from './seed-data/exercises.json';
 
-// GEÇİCİ: Supabase bağlantısı kurulana kadar (bkz. PROGRESS.md) egzersiz kütüphanesi
-// sadece bu 38 kayıtlık küratörlü bundle'dan gelir — scripts/seed-exercises/ pipeline'ının
-// gerçek free-exercise-db çıktısından elle seçildi (Paket 2). Uygulama ilk açıldığında,
-// tablo boşsa bir kereliğine yazılır. Gerçek Supabase senkronu geldiğinde bu fonksiyon
-// "pull egzersiz kütüphanesi" mantığıyla değiştirilecek.
-export async function seedLocalExercisesIfEmpty(): Promise<void> {
-  const existing = await db.select({ id: exercises.id }).from(exercises).limit(1);
-  if (existing.length > 0) return;
+const WRITE_BATCH_SIZE = 100;
 
-  await db.insert(exercises).values(
-    seedData.map((e) => ({
-      id: e.id,
-      slug: e.slug,
-      nameEn: e.name_en,
-      nameTr: e.name_tr,
-      equipment: e.equipment,
-      trackingType: e.tracking_type as (typeof exercises.$inferInsert)['trackingType'],
-    }))
-  );
-  console.log(`[seedLocalExercisesIfEmpty] ${seedData.length} egzersiz yerel DB'ye yazıldı.`);
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// Çevrimdışı ilk açılışta egzersizlerin anında hazır olması için bundle seed verisini yükler.
+// Çakışma anahtarı `slug`'dır — Supabase senkronu `id`'yi gerçek UUID ile güncellediğinde,
+// `slug` üzerinden çakışma yakalanır ve mevcut UUID bozulmadan diğer alanlar güncellenir.
+export async function seedLocalExercisesIfEmpty(): Promise<void> {
+  const rows = seedData.map((e) => ({
+    id: e.id,
+    slug: e.slug,
+    nameEn: e.name_en,
+    nameTr: e.name_tr,
+    equipment: e.equipment,
+    trackingType: e.tracking_type as (typeof exercises.$inferInsert)['trackingType'],
+    instructionsEn: e.instructions_en,
+    instructionsTr: e.instructions_tr,
+    primaryMuscles: e.primary_muscles,
+    imageUrl: e.image_url,
+    gifUrl: e.gif_url,
+  }));
+
+  for (const batch of chunk(rows, WRITE_BATCH_SIZE)) {
+    await db
+      .insert(exercises)
+      .values(batch)
+      .onConflictDoUpdate({
+        target: exercises.slug,
+        set: {
+          nameEn: sql`excluded.name_en`,
+          nameTr: sql`excluded.name_tr`,
+          equipment: sql`excluded.equipment`,
+          trackingType: sql`excluded.tracking_type`,
+          instructionsEn: sql`excluded.instructions_en`,
+          instructionsTr: sql`excluded.instructions_tr`,
+          primaryMuscles: sql`excluded.primary_muscles`,
+          imageUrl: sql`excluded.image_url`,
+          gifUrl: sql`excluded.gif_url`,
+        },
+      });
+  }
+  console.log(`[seedLocalExercisesIfEmpty] ${seedData.length} egzersiz yerel DB'ye yazıldı/güncellendi.`);
 }

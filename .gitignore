@@ -16,6 +16,7 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
+*.keystore
 *.mobileprovision
 
 # Metro
@@ -44,3 +45,7 @@ scripts/**/.cache/
 # generated native folders
 /ios
 /android
+
+# binary releases
+*.apk
+*.aab

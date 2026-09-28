@@ -1,8 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 
 import type { Database } from '../types/database';
+import { SecureStoreAdapter } from './secureStoreAdapter';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -13,12 +13,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// TODO(Faz 0): AsyncStorage yerine expo-secure-store tabanlı "LargeSecureStore"
-// adaptörüne geç (Supabase'in Expo rehberinde önerilen desen) — refresh token
-// düz metin olarak cihaz depolamasında tutulmamalı. PROGRESS.md'de takip ediliyor.
+// Donanım destekli Keychain/Keystore (expo-secure-store) ile güvenli oturum depolaması
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: SecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

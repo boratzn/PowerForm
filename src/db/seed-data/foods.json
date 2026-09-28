@@ -1,0 +1,597 @@
+[
+  {
+    "id": "food_tavuk_gogsu",
+    "name": "Tavuk Göğsü (Haşlanmış/Izgara)",
+    "brand": null,
+    "kcal_per_100": 165,
+    "protein_per_100": 31.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 3.6,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_tg_100", "label": "100 gram", "grams": 100, "is_default": true },
+      { "id": "srv_tg_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": false },
+      { "id": "srv_tg_fileto", "label": "1 tam göğüs fileto (200 g)", "grams": 200, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_yumurta_butun",
+    "name": "Yumurta (Bütün, Haşlanmış)",
+    "brand": null,
+    "kcal_per_100": 143,
+    "protein_per_100": 12.6,
+    "carbs_per_100": 0.7,
+    "fat_per_100": 9.5,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_ym_adet", "label": "1 adet orta boy (50 g)", "grams": 50, "is_default": true },
+      { "id": "srv_ym_buyuk", "label": "1 adet büyük boy (60 g)", "grams": 60, "is_default": false },
+      { "id": "srv_ym_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_yumurta_beyazi",
+    "name": "Yumurta Beyazı",
+    "brand": null,
+    "kcal_per_100": 52,
+    "protein_per_100": 11.0,
+    "carbs_per_100": 0.7,
+    "fat_per_100": 0.2,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_yb_adet", "label": "1 adet beyaz (33 g)", "grams": 33, "is_default": true },
+      { "id": "srv_yb_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_yulaf_ezmesi",
+    "name": "Yulaf Ezmesi",
+    "brand": null,
+    "kcal_per_100": 370,
+    "protein_per_100": 13.5,
+    "carbs_per_100": 60.0,
+    "fat_per_100": 7.0,
+    "fiber_per_100": 10.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_ylf_kasik", "label": "1 yemek kaşığı (10 g)", "grams": 10, "is_default": false },
+      { "id": "srv_ylf_pors", "label": "1 porsiyon / kase (50 g)", "grams": 50, "is_default": true },
+      { "id": "srv_ylf_bardak", "label": "1 su bardağı (100 g)", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_lor_peyniri",
+    "name": "Lor Peyniri (Yağsız / Az Yağlı)",
+    "brand": null,
+    "kcal_per_100": 98,
+    "protein_per_100": 18.0,
+    "carbs_per_100": 3.0,
+    "fat_per_100": 1.5,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_lor_kasik", "label": "1 yemek kaşığı (30 g)", "grams": 30, "is_default": false },
+      { "id": "srv_lor_pors", "label": "1 porsiyon (100 g)", "grams": 100, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_beyaz_peynir",
+    "name": "Beyaz Peynir (Tam Yağlı)",
+    "brand": null,
+    "kcal_per_100": 260,
+    "protein_per_100": 16.0,
+    "carbs_per_100": 2.0,
+    "fat_per_100": 21.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_bp_dilim", "label": "1 dilim (30 g)", "grams": 30, "is_default": true },
+      { "id": "srv_bp_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_kasar_peyniri",
+    "name": "Kaşar Peyniri",
+    "brand": null,
+    "kcal_per_100": 350,
+    "protein_per_100": 25.0,
+    "carbs_per_100": 1.5,
+    "fat_per_100": 27.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_kasar_dilim", "label": "1 dilim (20 g)", "grams": 20, "is_default": true },
+      { "id": "srv_kasar_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_suzme_yogurt",
+    "name": "Süzme Yoğurt / Protein Yoğurt",
+    "brand": null,
+    "kcal_per_100": 100,
+    "protein_per_100": 10.0,
+    "carbs_per_100": 4.0,
+    "fat_per_100": 4.5,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_sy_kase", "label": "1 kase (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_sy_kasik", "label": "1 yemek kaşığı (40 g)", "grams": 40, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_yogurt_kaymaksiz",
+    "name": "Yoğurt (Kaymaksız)",
+    "brand": null,
+    "kcal_per_100": 61,
+    "protein_per_100": 3.5,
+    "carbs_per_100": 4.7,
+    "fat_per_100": 3.3,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_yog_kase", "label": "1 kase (200 g)", "grams": 200, "is_default": true },
+      { "id": "srv_yog_kasik", "label": "1 yemek kaşığı (45 g)", "grams": 45, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_sut_yarim_yagli",
+    "name": "Süt (%1.5 Yarım Yağlı)",
+    "brand": null,
+    "kcal_per_100": 46,
+    "protein_per_100": 3.2,
+    "carbs_per_100": 4.8,
+    "fat_per_100": 1.5,
+    "fiber_per_100": 0.0,
+    "base_unit": "ml",
+    "servings": [
+      { "id": "srv_sut_bardak", "label": "1 su bardağı (200 ml)", "grams": 200, "is_default": true },
+      { "id": "srv_sut_cay", "label": "1 çay bardağı (100 ml)", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_whey_protein",
+    "name": "Whey Protein Tozu (Konsantre)",
+    "brand": null,
+    "kcal_per_100": 400,
+    "protein_per_100": 80.0,
+    "carbs_per_100": 8.0,
+    "fat_per_100": 5.0,
+    "fiber_per_100": 1.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_whey_olcek", "label": "1 ölçek (30 g)", "grams": 30, "is_default": true },
+      { "id": "srv_whey_cift", "label": "2 ölçek (60 g)", "grams": 60, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_pirinc_pismis",
+    "name": "Pirinç Pilavı (Pişmiş, Sade)",
+    "brand": null,
+    "kcal_per_100": 130,
+    "protein_per_100": 2.7,
+    "carbs_per_100": 28.0,
+    "fat_per_100": 0.3,
+    "fiber_per_100": 0.4,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_prn_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_prn_tabak", "label": "1 dolu tabak (200 g)", "grams": 200, "is_default": false },
+      { "id": "srv_prn_kasik", "label": "1 yemek kaşığı (25 g)", "grams": 25, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_bulgur_pismis",
+    "name": "Bulgur Pilavı (Pişmiş)",
+    "brand": null,
+    "kcal_per_100": 150,
+    "protein_per_100": 4.5,
+    "carbs_per_100": 28.0,
+    "fat_per_100": 2.5,
+    "fiber_per_100": 4.5,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_blg_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_blg_tabak", "label": "1 dolu tabak (200 g)", "grams": 200, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_makarna_pismis",
+    "name": "Makarna (Pişmiş)",
+    "brand": null,
+    "kcal_per_100": 158,
+    "protein_per_100": 5.8,
+    "carbs_per_100": 31.0,
+    "fat_per_100": 0.9,
+    "fiber_per_100": 1.8,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_mak_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_mak_tabak", "label": "1 dolu tabak (220 g)", "grams": 220, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_patates_haslama",
+    "name": "Patates (Haşlanmış / Fırın)",
+    "brand": null,
+    "kcal_per_100": 87,
+    "protein_per_100": 1.9,
+    "carbs_per_100": 20.0,
+    "fat_per_100": 0.1,
+    "fiber_per_100": 1.8,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_pat_orta", "label": "1 adet orta boy (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_pat_buyuk", "label": "1 adet büyük boy (220 g)", "grams": 220, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_tam_bugday_ekmek",
+    "name": "Tam Buğday Ekmeği",
+    "brand": null,
+    "kcal_per_100": 247,
+    "protein_per_100": 13.0,
+    "carbs_per_100": 41.0,
+    "fat_per_100": 3.4,
+    "fiber_per_100": 7.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_tbe_dilim", "label": "1 dilim (35 g)", "grams": 35, "is_default": true },
+      { "id": "srv_tbe_cift", "label": "2 dilim (70 g)", "grams": 70, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_beyaz_ekmek",
+    "name": "Beyaz Ekmek (Somun)",
+    "brand": null,
+    "kcal_per_100": 265,
+    "protein_per_100": 9.0,
+    "carbs_per_100": 49.0,
+    "fat_per_100": 3.2,
+    "fiber_per_100": 2.7,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_be_dilim", "label": "1 dilim (30 g)", "grams": 30, "is_default": true },
+      { "id": "srv_be_yarim", "label": "Yarım ekmek (100 g)", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_dana_kiyma_yagsiz",
+    "name": "Dana Kıyma (Az Yağlı, %10-12)",
+    "brand": null,
+    "kcal_per_100": 215,
+    "protein_per_100": 26.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 12.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_kym_100", "label": "100 gram", "grams": 100, "is_default": true },
+      { "id": "srv_kym_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_dana_biftek",
+    "name": "Dana Antrikot / Biftek (Izgara)",
+    "brand": null,
+    "kcal_per_100": 240,
+    "protein_per_100": 28.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 14.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_bftk_150", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true },
+      { "id": "srv_bftk_200", "label": "1 büyük parça (200 g)", "grams": 200, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_somon",
+    "name": "Somon Balığı (Fırın/Izgara)",
+    "brand": null,
+    "kcal_per_100": 208,
+    "protein_per_100": 20.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 13.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_smn_fileto", "label": "1 adet fileto (180 g)", "grams": 180, "is_default": true },
+      { "id": "srv_smn_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_ton_baligi",
+    "name": "Ton Balığı (Konserve, Suda)",
+    "brand": null,
+    "kcal_per_100": 116,
+    "protein_per_100": 26.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 1.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_ton_kutu", "label": "1 kutu süzülmüş (120 g)", "grams": 120, "is_default": true },
+      { "id": "srv_ton_kucuk", "label": "1 küçük kutu süzülmüş (80 g)", "grams": 80, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_zeytinyagi",
+    "name": "Zeytinyağı (Naturel Sızma)",
+    "brand": null,
+    "kcal_per_100": 884,
+    "protein_per_100": 0.0,
+    "carbs_per_100": 0.0,
+    "fat_per_100": 100.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_zyt_kasik", "label": "1 yemek kaşığı (10 g)", "grams": 10, "is_default": true },
+      { "id": "srv_zyt_tatli", "label": "1 tatlı kaşığı (5 g)", "grams": 5, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_tereyagi",
+    "name": "Tereyağı",
+    "brand": null,
+    "kcal_per_100": 717,
+    "protein_per_100": 0.9,
+    "carbs_per_100": 0.1,
+    "fat_per_100": 81.0,
+    "fiber_per_100": 0.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_ter_tatli", "label": "1 tatlı kaşığı (10 g)", "grams": 10, "is_default": true },
+      { "id": "srv_ter_kasik", "label": "1 yemek kaşığı (15 g)", "grams": 15, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_badem_cig",
+    "name": "Çiğ Badem",
+    "brand": null,
+    "kcal_per_100": 579,
+    "protein_per_100": 21.0,
+    "carbs_per_100": 22.0,
+    "fat_per_100": 50.0,
+    "fiber_per_100": 12.5,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_bdm_avuc", "label": "1 avuç (~25 g / 15-20 adet)", "grams": 25, "is_default": true },
+      { "id": "srv_bdm_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_ceviz_cig",
+    "name": "Çiğ Ceviz İçi",
+    "brand": null,
+    "kcal_per_100": 654,
+    "protein_per_100": 15.0,
+    "carbs_per_100": 14.0,
+    "fat_per_100": 65.0,
+    "fiber_per_100": 6.7,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_cvz_avuc", "label": "1 avuç (~30 g / 4 tam ceviz)", "grams": 30, "is_default": true },
+      { "id": "srv_cvz_100", "label": "100 gram", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_fistik_ezmesi",
+    "name": "Fıstık Ezmesi (%100 Şekersiz)",
+    "brand": null,
+    "kcal_per_100": 588,
+    "protein_per_100": 25.0,
+    "carbs_per_100": 20.0,
+    "fat_per_100": 50.0,
+    "fiber_per_100": 8.0,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_fe_kasik", "label": "1 yemek kaşığı (15 g)", "grams": 15, "is_default": true },
+      { "id": "srv_fe_tatli", "label": "1 tatlı kaşığı (8 g)", "grams": 8, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_muz",
+    "name": "Muz",
+    "brand": null,
+    "kcal_per_100": 89,
+    "protein_per_100": 1.1,
+    "carbs_per_100": 23.0,
+    "fat_per_100": 0.3,
+    "fiber_per_100": 2.6,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_muz_orta", "label": "1 adet orta boy (120 g)", "grams": 120, "is_default": true },
+      { "id": "srv_muz_buyuk", "label": "1 adet büyük boy (150 g)", "grams": 150, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_elma",
+    "name": "Elma",
+    "brand": null,
+    "kcal_per_100": 52,
+    "protein_per_100": 0.3,
+    "carbs_per_100": 14.0,
+    "fat_per_100": 0.2,
+    "fiber_per_100": 2.4,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_elma_orta", "label": "1 adet orta boy (150 g)", "grams": 150, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_portakal",
+    "name": "Portakal",
+    "brand": null,
+    "kcal_per_100": 47,
+    "protein_per_100": 0.9,
+    "carbs_per_100": 12.0,
+    "fat_per_100": 0.1,
+    "fiber_per_100": 2.4,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_por_orta", "label": "1 adet orta boy (130 g)", "grams": 130, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_avokado",
+    "name": "Avokado",
+    "brand": null,
+    "kcal_per_100": 160,
+    "protein_per_100": 2.0,
+    "carbs_per_100": 8.5,
+    "fat_per_100": 14.7,
+    "fiber_per_100": 6.7,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_avo_yarim", "label": "Yarım avokado (70 g)", "grams": 70, "is_default": true },
+      { "id": "srv_avo_tam", "label": "1 adet tam avokado (140 g)", "grams": 140, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_brokoli",
+    "name": "Brokoli (Haşlanmış)",
+    "brand": null,
+    "kcal_per_100": 35,
+    "protein_per_100": 2.4,
+    "carbs_per_100": 7.0,
+    "fat_per_100": 0.4,
+    "fiber_per_100": 3.3,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_brk_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_ispanak",
+    "name": "Ispanak (Pişmiş/Haşlanmış)",
+    "brand": null,
+    "kcal_per_100": 23,
+    "protein_per_100": 2.9,
+    "carbs_per_100": 3.6,
+    "fat_per_100": 0.4,
+    "fiber_per_100": 2.2,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_isp_pors", "label": "1 porsiyon (150 g)", "grams": 150, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_domates",
+    "name": "Domates",
+    "brand": null,
+    "kcal_per_100": 18,
+    "protein_per_100": 0.9,
+    "carbs_per_100": 3.9,
+    "fat_per_100": 0.2,
+    "fiber_per_100": 1.2,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_dom_orta", "label": "1 adet orta boy (120 g)", "grams": 120, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_salatalik",
+    "name": "Salatalık",
+    "brand": null,
+    "kcal_per_100": 15,
+    "protein_per_100": 0.7,
+    "carbs_per_100": 3.6,
+    "fat_per_100": 0.1,
+    "fiber_per_100": 0.5,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_sal_adet", "label": "1 adet orta boy (100 g)", "grams": 100, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_mercimek_corbasi",
+    "name": "Mercimek Çorbası",
+    "brand": null,
+    "kcal_per_100": 56,
+    "protein_per_100": 3.2,
+    "carbs_per_100": 8.5,
+    "fat_per_100": 1.2,
+    "fiber_per_100": 1.8,
+    "base_unit": "ml",
+    "servings": [
+      { "id": "srv_mc_kase", "label": "1 kase (250 ml)", "grams": 250, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_izgara_kofte",
+    "name": "Izgara Köfte (Ev Yapımı)",
+    "brand": null,
+    "kcal_per_100": 240,
+    "protein_per_100": 18.0,
+    "carbs_per_100": 5.0,
+    "fat_per_100": 16.0,
+    "fiber_per_100": 0.5,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_kft_adet", "label": "1 adet köfte (35 g)", "grams": 35, "is_default": false },
+      { "id": "srv_kft_pors", "label": "1 porsiyon / 4 adet (140 g)", "grams": 140, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_menemen",
+    "name": "Menemen (Sade, 2 Yumurtalı)",
+    "brand": null,
+    "kcal_per_100": 120,
+    "protein_per_100": 7.0,
+    "carbs_per_100": 4.0,
+    "fat_per_100": 8.5,
+    "fiber_per_100": 1.2,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_mnm_pors", "label": "1 porsiyon (180 g)", "grams": 180, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_kuru_fasulye",
+    "name": "Kuru Fasulye Yemeği (Etsiz)",
+    "brand": null,
+    "kcal_per_100": 110,
+    "protein_per_100": 6.0,
+    "carbs_per_100": 15.0,
+    "fat_per_100": 3.0,
+    "fiber_per_100": 4.5,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_kf_tabak", "label": "1 tabak (200 g)", "grams": 200, "is_default": true }
+    ]
+  },
+  {
+    "id": "food_nohut_haslama",
+    "name": "Nohut (Haşlanmış)",
+    "brand": null,
+    "kcal_per_100": 164,
+    "protein_per_100": 8.9,
+    "carbs_per_100": 27.0,
+    "fat_per_100": 2.6,
+    "fiber_per_100": 7.6,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_nht_tabak", "label": "1 tabak (180 g)", "grams": 180, "is_default": true },
+      { "id": "srv_nht_kase", "label": "1 kase (100 g)", "grams": 100, "is_default": false }
+    ]
+  },
+  {
+    "id": "food_bal",
+    "name": "Bal (Doğal Süzme)",
+    "brand": null,
+    "kcal_per_100": 304,
+    "protein_per_100": 0.3,
+    "carbs_per_100": 82.0,
+    "fat_per_100": 0.0,
+    "fiber_per_100": 0.2,
+    "base_unit": "g",
+    "servings": [
+      { "id": "srv_bal_tatli", "label": "1 tatlı kaşığı (10 g)", "grams": 10, "is_default": true },
+      { "id": "srv_bal_kasik", "label": "1 yemek kaşığı (20 g)", "grams": 20, "is_default": false }
+    ]
+  }
+]

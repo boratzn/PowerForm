@@ -77,19 +77,21 @@ export async function writeToSupabase(input: {
     if (delMediaErr) throw new Error(`exercise_media silme hatası: ${delMediaErr.message}`);
   }
 
-  console.log(`[write] exercise_muscles ekleniyor (${input.muscleLinks.length} satır)`);
-  const muscleRows = input.muscleLinks
-    .map((l) => {
-      const exercise_id = slugToId.get(l.exercise_slug);
-      if (!exercise_id) return null;
-      return {
-        exercise_id,
-        muscle_group_id: l.muscle_group_id,
-        role: l.role,
-        volume_factor: l.volume_factor,
-      };
-    })
-    .filter((r): r is NonNullable<typeof r> => r !== null);
+  // (exercise_id, muscle_group_id) PRIMARY KEY'dir (bkz. 004_exercises.sql) — kaynak veride
+  // aynı kas grubuna iki farklı ham kas adı eşleşebiliyor (örn. "middle back" ve "lats" ikisi
+  // de upper_back'e), bu da aynı egzersiz için çakışan satır üretir. primary, secondary'den
+  // önceliklidir (hacim hesabında daha yüksek katsayı taşıdığı için kaybolmamalı).
+  console.log(`[write] exercise_muscles ekleniyor (${input.muscleLinks.length} satır, dedupe sonrası)`);
+  const muscleRowMap = new Map<string, { exercise_id: string; muscle_group_id: string; role: string; volume_factor: number }>();
+  for (const l of input.muscleLinks) {
+    const exercise_id = slugToId.get(l.exercise_slug);
+    if (!exercise_id) continue;
+    const key = `${exercise_id}:${l.muscle_group_id}`;
+    const existing = muscleRowMap.get(key);
+    if (existing && existing.role === 'primary') continue; // primary zaten var, secondary'yi atla
+    muscleRowMap.set(key, { exercise_id, muscle_group_id: l.muscle_group_id, role: l.role, volume_factor: l.volume_factor });
+  }
+  const muscleRows = [...muscleRowMap.values()];
   for (const batch of chunk(muscleRows, WRITE_BATCH_SIZE)) {
     const { error } = await supabase.from('exercise_muscles').insert(batch);
     if (error) throw new Error(`exercise_muscles insert hatası: ${error.message}`);

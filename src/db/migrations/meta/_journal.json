@@ -8,6 +8,55 @@
       "when": 1788016094128,
       "tag": "0000_colossal_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788090882775,
+      "tag": "0001_slim_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788112506778,
+      "tag": "0002_burly_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788113362278,
+      "tag": "0003_busy_eddie_brock",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790262804131,
+      "tag": "0004_nebulous_sister_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790282716741,
+      "tag": "0005_rapid_nico_minoru",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790285653136,
+      "tag": "0006_aspiring_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790326978760,
+      "tag": "0007_true_warbird",
+      "breakpoints": true
     }
   ]
 }

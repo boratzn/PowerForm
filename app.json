@@ -3,7 +3,7 @@
     "name": "Powerform",
     "slug": "Powerform",
     "scheme": "powerform",
-    "version": "1.0.0",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -13,6 +13,8 @@
       "bundleIdentifier": "com.anonymous.Powerform"
     },
     "android": {
+      "package": "com.powerform.app",
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#0B0F14",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -29,7 +31,9 @@
       "expo-status-bar",
       "expo-sqlite",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-image",
+      "expo-localization"
     ]
   }
 }

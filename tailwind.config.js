@@ -19,6 +19,7 @@ module.exports = {
           DEFAULT: '#4ADE80',
           alt: '#38BDF8',
         },
+        accentAlt: '#38BDF8',
         warning: '#FBBF24',
         danger: '#F87171',
       },

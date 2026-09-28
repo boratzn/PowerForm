@@ -1,20 +1,24 @@
 import { useKeepAwake } from 'expo-keep-awake';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, Text, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button } from '../src/components/ui';
+import { Button, ModernConfirmModal } from '../src/components/ui';
 import {
   ExerciseCard,
   ExercisePickerSheet,
+  ExerciseProgressModal,
   NumericKeypad,
   RestTimerBar,
+  SessionCompletedModal,
   type ActiveField,
 } from '../src/components/session';
+import { getProgramDayExercises } from '../src/db/programs';
 import type { LocalExercise } from '../src/db/queries';
-import { calculateVolume } from '../src/lib/calculations';
+import { calculateVolume, formatDurationHuman } from '../src/lib/calculations';
 import { cancelRestEndNotification, scheduleRestEndNotification } from '../src/lib/restNotification';
+import { useLanguageStore } from '../src/stores/useLanguageStore';
 import { useSessionStore } from '../src/stores/useSessionStore';
 
 type ActiveFieldRef = { exerciseClientUuid: string; setClientUuid: string; field: ActiveField } | null;
@@ -36,9 +40,10 @@ export default function SessionScreen() {
   const startedAt = useSessionStore((s) => s.startedAt);
   const exercises = useSessionStore((s) => s.exercises);
   const restTimer = useSessionStore((s) => s.restTimer);
-  const startSession = useSessionStore((s) => s.startSession);
+  const resumeOrStartSession = useSessionStore((s) => s.resumeOrStartSession);
   const addExercise = useSessionStore((s) => s.addExercise);
   const removeExercise = useSessionStore((s) => s.removeExercise);
+  const updateExerciseNotes = useSessionStore((s) => s.updateExerciseNotes);
   const addSet = useSessionStore((s) => s.addSet);
   const updateDraftSet = useSessionStore((s) => s.updateDraftSet);
   const confirmSet = useSessionStore((s) => s.confirmSet);
@@ -50,17 +55,51 @@ export default function SessionScreen() {
   const endSession = useSessionStore((s) => s.endSession);
   const resetSession = useSessionStore((s) => s.reset);
 
+  const params = useLocalSearchParams<{ programId?: string; programDayId?: string }>();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [activeField, setActiveField] = useState<ActiveFieldRef>(null);
   const [draftValue, setDraftValue] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [selectedExerciseForProgress, setSelectedExerciseForProgress] = useState<string | null>(null);
 
-  // Boş seans (ad-hoc) başlat — henüz program bazlı başlatma yok (bkz. PROGRESS.md).
+  const [finishModalVisible, setFinishModalVisible] = useState(false);
+  const [completedSummary, setCompletedSummary] = useState<{
+    durationSeconds: number;
+    totalVolumeKg: number;
+    prCount: number;
+  } | null>(null);
+  const [deleteSetTarget, setDeleteSetTarget] = useState<{
+    exerciseClientUuid: string;
+    setClientUuid: string;
+  } | null>(null);
+
+  const t = useLanguageStore((s) => s.t);
+  const isEndingRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // Yarım kalan bir seans varsa ondan devam eder; yoksa programa bağlı veya ad-hoc başlar.
+  // Yalnızca ekran ilk açıldığında (mount) bir kez çalışır; seans bitirildiğinde tekrar tetiklenmez.
   useEffect(() => {
+    if (isInitializedRef.current || isEndingRef.current) return;
+    isInitializedRef.current = true;
+
     if (!sessionClientUuid) {
-      startSession().catch((err) => console.error('[session] startSession hatası:', err));
+      if (params.programDayId) {
+        getProgramDayExercises(params.programDayId)
+          .then((initialExercises) => {
+            if (isEndingRef.current) return;
+            return resumeOrStartSession({
+              programId: params.programId,
+              programDayId: params.programDayId,
+              initialExercises,
+            });
+          })
+          .catch((err) => console.error('[session] resumeOrStartSession hatası:', err));
+      } else {
+        resumeOrStartSession().catch((err) => console.error('[session] resumeOrStartSession hatası:', err));
+      }
     }
-  }, [sessionClientUuid, startSession]);
+  }, []);
 
   // Süre sayacı
   useEffect(() => {
@@ -88,7 +127,7 @@ export default function SessionScreen() {
   // Dinlenme sayacı başladığında/uzadığında arka plan bildirimini (yeniden) zamanla
   useEffect(() => {
     if (restTimer.isRunning) {
-      scheduleRestEndNotification(restTimer.secondsLeft, 'Antrenman');
+      scheduleRestEndNotification(restTimer.secondsLeft, t('tab_workout')).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimer.isRunning, restTimer.totalSeconds]);
@@ -135,46 +174,45 @@ export default function SessionScreen() {
     return { label: `${prev.weightKg ?? '?'}×${prev.reps ?? '?'}`, value: String(value) };
   })();
 
+  const isConfirmingRef = useRef(false);
+
   const handleToggleComplete = async (exerciseClientUuid: string, setClientUuid: string) => {
+    if (isConfirmingRef.current) return;
     const ex = exercises.find((e) => e.clientUuid === exerciseClientUuid);
     const s = ex?.sets.find((s) => s.clientUuid === setClientUuid);
     if (!s) return;
     if (s.isCompleted) {
       reopenSet(exerciseClientUuid, setClientUuid);
     } else {
-      await confirmSet(exerciseClientUuid, setClientUuid);
+      isConfirmingRef.current = true;
+      try {
+        setActiveField(null);
+        await confirmSet(exerciseClientUuid, setClientUuid);
+      } finally {
+        isConfirmingRef.current = false;
+      }
     }
   };
 
   const handleLongPressSet = (exerciseClientUuid: string, setClientUuid: string) => {
-    Alert.alert('Set', undefined, [
-      { text: 'Düzenle', onPress: () => reopenSet(exerciseClientUuid, setClientUuid) },
-      { text: 'Sil', style: 'destructive', onPress: () => deleteSet(exerciseClientUuid, setClientUuid) },
-      { text: 'Vazgeç', style: 'cancel' },
-    ]);
+    setDeleteSetTarget({ exerciseClientUuid, setClientUuid });
   };
 
   const handleSelectExercise = (exercise: LocalExercise) => {
     addExercise(exercise).catch((err) => console.error('[session] addExercise hatası:', err));
   };
 
-  const handleEndSession = () => {
-    Alert.alert('Seansı bitir?', 'Tamamlanmamış setler kaydedilmeyecek.', [
-      { text: 'Vazgeç', style: 'cancel' },
-      {
-        text: 'Bitir',
-        style: 'destructive',
-        onPress: async () => {
-          const summary = await endSession();
-          resetSession();
-          Alert.alert(
-            'Seans tamamlandı',
-            `Süre: ${Math.round(summary.durationSeconds / 60)} dk\nHacim: ${summary.totalVolumeKg} kg\nPR: ${summary.prCount}`,
-            [{ text: 'Tamam', onPress: () => router.back() }]
-          );
-        },
-      },
-    ]);
+  const confirmEndSession = async () => {
+    setFinishModalVisible(false);
+    isEndingRef.current = true;
+    try {
+      const summary = await endSession();
+      resetSession();
+      setCompletedSummary(summary);
+    } catch (err) {
+      isEndingRef.current = false;
+      console.error('Seans sonlandırma hatası:', err);
+    }
   };
 
   return (
@@ -185,10 +223,10 @@ export default function SessionScreen() {
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}
           </Text>
           <Text className="text-xs text-text-muted">
-            {completedSets}/{totalSets} set · {totalVolumeKg} kg
+            {completedSets}/{totalSets} {t('set').toLowerCase()} · {totalVolumeKg} kg
           </Text>
         </View>
-        <Button label="Bitir" variant="secondary" onPress={handleEndSession} />
+        <Button label={t('finish')} variant="secondary" onPress={() => setFinishModalVisible(true)} />
       </View>
 
       <ScrollView className="flex-1 px-lg" contentContainerStyle={{ paddingTop: 16, paddingBottom: 24, gap: 16 }}>
@@ -206,10 +244,12 @@ export default function SessionScreen() {
             onLongPressSet={(setClientUuid) => handleLongPressSet(ex.clientUuid, setClientUuid)}
             onAddSet={() => addSet(ex.clientUuid)}
             onRemoveExercise={() => removeExercise(ex.clientUuid)}
+            onUpdateNotes={(notes) => updateExerciseNotes(ex.clientUuid, notes)}
+            onPressExercise={() => setSelectedExerciseForProgress(ex.exerciseId)}
           />
         ))}
 
-        <Button label="+ Egzersiz Ekle" variant="secondary" onPress={() => setPickerVisible(true)} />
+        <Button label={t('add_exercise')} variant="secondary" onPress={() => setPickerVisible(true)} />
       </ScrollView>
 
       {activeField ? (
@@ -235,6 +275,57 @@ export default function SessionScreen() {
       )}
 
       <ExercisePickerSheet visible={pickerVisible} onClose={() => setPickerVisible(false)} onSelect={handleSelectExercise} />
+
+      <ExerciseProgressModal
+        visible={!!selectedExerciseForProgress}
+        exerciseId={selectedExerciseForProgress}
+        onClose={() => setSelectedExerciseForProgress(null)}
+      />
+
+      {/* Modern Seansı Bitir Onay Modalı */}
+      <ModernConfirmModal
+        visible={finishModalVisible}
+        title={t('finish_session_title')}
+        description={t('finish_session_desc')}
+        icon="flag-outline"
+        confirmText={t('finish')}
+        cancelText={t('cancel')}
+        isDestructive
+        onConfirm={confirmEndSession}
+        onCancel={() => setFinishModalVisible(false)}
+      />
+
+      {/* Modern Seans Tamamlandı Kutlama Modalı */}
+      {completedSummary && (
+        <SessionCompletedModal
+          visible={!!completedSummary}
+          durationSeconds={completedSummary.durationSeconds}
+          totalVolumeKg={completedSummary.totalVolumeKg}
+          prCount={completedSummary.prCount}
+          onClose={() => {
+            setCompletedSummary(null);
+            router.back();
+          }}
+        />
+      )}
+
+      {/* Modern Set Silme Onay Modalı */}
+      <ModernConfirmModal
+        visible={!!deleteSetTarget}
+        title={t('delete_set_title')}
+        description={t('delete_set_confirm')}
+        icon="trash-outline"
+        confirmText={t('delete')}
+        cancelText={t('cancel')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteSetTarget) {
+            deleteSet(deleteSetTarget.exerciseClientUuid, deleteSetTarget.setClientUuid);
+            setDeleteSetTarget(null);
+          }
+        }}
+        onCancel={() => setDeleteSetTarget(null)}
+      />
     </View>
   );
 }
