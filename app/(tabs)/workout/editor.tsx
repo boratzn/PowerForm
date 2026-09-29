@@ -71,10 +71,73 @@ export default function ProgramEditorScreen() {
   const [saving, setSaving] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const dayContainerYRef = useRef(0);
   const exercisesContainerYRef = useRef(0);
   const cardLayoutsRef = useRef<Record<string, number>>({});
+  const cardRefs = useRef<Record<string, any>>({});
+  const focusedExerciseTempIdRef = useRef<string | null>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(300);
+  const [keyboardHeight, setKeyboardHeight] = useState(320);
+
+  const scrollToExercise = (tempId: string) => {
+    if (!tempId) return;
+    focusedExerciseTempIdRef.current = tempId;
+
+    const performScroll = () => {
+      if (!scrollViewRef.current) return;
+
+      const node = cardRefs.current[tempId];
+      if (node && typeof node.measureLayout === 'function') {
+        try {
+          node.measureLayout(
+            scrollViewRef.current as any,
+            (_x: number, y: number) => {
+              if (typeof y === 'number' && y > 0) {
+                scrollViewRef.current?.scrollTo({
+                  y: Math.max(0, y - 20),
+                  animated: true,
+                });
+                return;
+              }
+              fallbackScroll(tempId);
+            },
+            () => fallbackScroll(tempId)
+          );
+          return;
+        } catch (_) {
+          // ignore and fallback
+        }
+      }
+      fallbackScroll(tempId);
+    };
+
+    const fallbackScroll = (id: string) => {
+      const dayY = dayContainerYRef.current || 0;
+      const exContainerY = exercisesContainerYRef.current || 0;
+      const cardY = cardLayoutsRef.current[id] || 0;
+      const targetY = Math.max(0, dayY + exContainerY + cardY - 20);
+      scrollViewRef.current?.scrollTo({
+        y: targetY,
+        animated: true,
+      });
+    };
+
+    performScroll();
+    setTimeout(performScroll, 50);
+    setTimeout(performScroll, 160);
+    setTimeout(performScroll, 320);
+  };
+
+  const scrollToDaySettings = () => {
+    const dayY = dayContainerYRef.current || 0;
+    const targetY = Math.max(0, dayY - 20);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: targetY,
+        animated: true,
+      });
+    }, 60);
+  };
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -83,6 +146,12 @@ export default function ProgramEditorScreen() {
         setIsKeyboardVisible(true);
         if (e.endCoordinates?.height) {
           setKeyboardHeight(e.endCoordinates.height);
+        }
+        if (focusedExerciseTempIdRef.current) {
+          const currentId = focusedExerciseTempIdRef.current;
+          setTimeout(() => {
+            scrollToExercise(currentId);
+          }, Platform.OS === 'ios' ? 40 : 120);
         }
       }
     );
@@ -97,19 +166,6 @@ export default function ProgramEditorScreen() {
       hideSub.remove();
     };
   }, []);
-
-  const scrollToExercise = (tempId: string) => {
-    const containerY = exercisesContainerYRef.current || 0;
-    const cardY = cardLayoutsRef.current[tempId] || 0;
-    const targetY = Math.max(0, containerY + cardY - 20);
-
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({
-        y: targetY,
-        animated: true,
-      });
-    }, 80);
-  };
 
   // Form states
   const [name, setName] = useState('');
@@ -358,7 +414,7 @@ export default function ProgramEditorScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: 16,
-          paddingBottom: isKeyboardVisible ? Math.max(340, keyboardHeight + 80) : insets.bottom + 100,
+          paddingBottom: isKeyboardVisible ? Math.max(520, keyboardHeight + 220) : insets.bottom + 120,
           gap: 16,
         }}
       >
@@ -488,7 +544,12 @@ export default function ProgramEditorScreen() {
 
         {/* Seçili Gün Ayarları ve Egzersizler */}
         {activeDay && (
-          <View className="gap-md">
+          <View
+            className="gap-md"
+            onLayout={(e) => {
+              dayContainerYRef.current = e.nativeEvent.layout.y;
+            }}
+          >
             <Card className="gap-sm">
               <View className="flex-row items-center justify-between">
                 <Text className="text-base font-bold text-text-primary">
@@ -507,6 +568,7 @@ export default function ProgramEditorScreen() {
                   <Input
                     placeholder="Örn: İtiş (Göğüs-Omuz)"
                     value={activeDay.name}
+                    onFocus={scrollToDaySettings}
                     onChangeText={(val) => updateActiveDayField('name', val)}
                   />
                 </View>
@@ -515,6 +577,7 @@ export default function ProgramEditorScreen() {
                   <Input
                     placeholder="Örn: Göğüs, Triceps"
                     value={activeDay.focus}
+                    onFocus={scrollToDaySettings}
                     onChangeText={(val) => updateActiveDayField('focus', val)}
                   />
                 </View>
@@ -557,6 +620,9 @@ export default function ProgramEditorScreen() {
                   return (
                     <View
                       key={item.tempId}
+                      ref={(el) => {
+                        cardRefs.current[item.tempId] = el;
+                      }}
                       onLayout={(e) => {
                         cardLayoutsRef.current[item.tempId] = e.nativeEvent.layout.y;
                       }}

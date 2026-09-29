@@ -76,6 +76,8 @@ export default function SessionScreen() {
   const t = useLanguageStore((s) => s.t);
   const isEndingRef = useRef(false);
   const isInitializedRef = useRef(false);
+  const sessionScrollViewRef = useRef<ScrollView>(null);
+  const exerciseLayoutsRef = useRef<Record<string, number>>({});
 
   // Yarım kalan bir seans varsa ondan devam eder; yoksa programa bağlı veya ad-hoc başlar.
   // Yalnızca ekran ilk açıldığında (mount) bir kez çalışır; seans bitirildiğinde tekrar tetiklenmez.
@@ -156,6 +158,16 @@ export default function SessionScreen() {
     const current = s?.[field];
     setActiveField({ exerciseClientUuid, setClientUuid, field });
     setDraftValue(current != null ? String(current) : '');
+
+    const y = exerciseLayoutsRef.current[exerciseClientUuid];
+    if (typeof y === 'number') {
+      setTimeout(() => {
+        sessionScrollViewRef.current?.scrollTo({
+          y: Math.max(0, y - 20),
+          animated: true,
+        });
+      }, 50);
+    }
   };
 
   const commitDraft = (nextValue: string) => {
@@ -234,24 +246,38 @@ export default function SessionScreen() {
         <Button label={t('finish')} variant="secondary" onPress={() => setFinishModalVisible(true)} />
       </View>
 
-      <ScrollView className="flex-1 px-lg" contentContainerStyle={{ paddingTop: 16, paddingBottom: 24, gap: 16 }}>
+      <ScrollView
+        ref={sessionScrollViewRef}
+        className="flex-1 px-lg"
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingBottom: activeField ? 340 : 24,
+          gap: 16,
+        }}
+      >
         {exercises.map((ex) => (
-          <ExerciseCard
+          <View
             key={ex.clientUuid}
-            exercise={ex}
-            activeFieldRef={
-              activeField?.exerciseClientUuid === ex.clientUuid
-                ? { setClientUuid: activeField.setClientUuid, field: activeField.field }
-                : null
-            }
-            onFieldPress={(setClientUuid, field) => handleFieldPress(ex.clientUuid, setClientUuid, field)}
-            onToggleComplete={(setClientUuid) => handleToggleComplete(ex.clientUuid, setClientUuid)}
-            onLongPressSet={(setClientUuid) => handleLongPressSet(ex.clientUuid, setClientUuid)}
-            onAddSet={() => addSet(ex.clientUuid)}
-            onRemoveExercise={() => removeExercise(ex.clientUuid)}
-            onUpdateNotes={(notes) => updateExerciseNotes(ex.clientUuid, notes)}
-            onPressExercise={() => setSelectedExerciseForProgress(ex.exerciseId)}
-          />
+            onLayout={(e) => {
+              exerciseLayoutsRef.current[ex.clientUuid] = e.nativeEvent.layout.y;
+            }}
+          >
+            <ExerciseCard
+              exercise={ex}
+              activeFieldRef={
+                activeField?.exerciseClientUuid === ex.clientUuid
+                  ? { setClientUuid: activeField.setClientUuid, field: activeField.field }
+                  : null
+              }
+              onFieldPress={(setClientUuid, field) => handleFieldPress(ex.clientUuid, setClientUuid, field)}
+              onToggleComplete={(setClientUuid) => handleToggleComplete(ex.clientUuid, setClientUuid)}
+              onLongPressSet={(setClientUuid) => handleLongPressSet(ex.clientUuid, setClientUuid)}
+              onAddSet={() => addSet(ex.clientUuid)}
+              onRemoveExercise={() => removeExercise(ex.clientUuid)}
+              onUpdateNotes={(notes) => updateExerciseNotes(ex.clientUuid, notes)}
+              onPressExercise={() => setSelectedExerciseForProgress(ex.exerciseId)}
+            />
+          </View>
         ))}
 
         <Button label={t('add_exercise')} variant="secondary" onPress={() => setPickerVisible(true)} />
