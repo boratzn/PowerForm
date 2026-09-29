@@ -577,7 +577,7 @@ export default function ProfileScreen() {
       <Card className="gap-sm">
         <View className="flex-row items-center justify-between">
           <Text className="text-xs uppercase font-bold text-text-muted">{t('account')}</Text>
-          <Text className="text-xs text-text-muted">Powerform v1.0.6</Text>
+          <Text className="text-xs text-text-muted">Powerform v1.0.7</Text>
         </View>
 
         <Text className="text-sm text-text-primary">{email}</Text>
