@@ -41,6 +41,12 @@ const FEATURES = [
     title: 'Sınırsız Etkileşim & Check-in',
     desc: 'Haftalık toparlanma, eklem ağrısı ve form sorularına kişiye özel rehberlik.',
   },
+  {
+    icon: 'nutrition',
+    color: '#10B981',
+    title: 'Gelişmiş Beslenme & Makro Takibi',
+    desc: 'Detaylı besin veri tabanı, öğün bazlı kalori/makro kaydı ve hedef hesaplayıcı.',
+  },
 ];
 
 export function PaywallModal() {

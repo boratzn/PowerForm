@@ -19,6 +19,7 @@ import { getDailyNutritionReport, type DailyNutritionReport } from '../../src/db
 import { dateKey, formatDurationHuman } from '../../src/lib/calculations';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 import { useSessionStore } from '../../src/stores/useSessionStore';
+import { useProgramStore } from '../../src/stores/useProgramStore';
 import { useLanguageStore } from '../../src/stores/useLanguageStore';
 import { colors } from '../../src/constants/theme';
 import type { Language } from '../../src/lib/i18n';
@@ -47,6 +48,27 @@ export default function TodayScreen() {
   const navigation = useNavigation<any>();
   const userId = useAuthStore((s) => s.session?.user.id);
   const activeSessionClientUuid = useSessionStore((s) => s.sessionClientUuid);
+  const activeProgram = useProgramStore((s) => s.activeProgram);
+  const selectedDayIndex = useProgramStore((s) => s.selectedDayIndex);
+
+  const handleStartSession = () => {
+    if (activeProgram) {
+      const currentDay = activeProgram.days[selectedDayIndex] ?? activeProgram.days[0];
+      if (currentDay) {
+        const sessionName = currentDay.name ? `${activeProgram.name} - ${currentDay.name}` : activeProgram.name;
+        router.push({
+          pathname: '/session',
+          params: {
+            programId: activeProgram.clientUuid,
+            programDayId: currentDay.clientUuid,
+            sessionName,
+          },
+        });
+        return;
+      }
+    }
+    router.push('/session');
+  };
 
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
@@ -144,7 +166,7 @@ export default function TodayScreen() {
                 {t('no_session_yet')}
               </Text>
             )}
-            <Button label={t('start_session')} onPress={() => router.push('/session')} />
+            <Button label={t('start_session')} onPress={handleStartSession} />
           </>
         )}
         {!!highlights?.prCount && (

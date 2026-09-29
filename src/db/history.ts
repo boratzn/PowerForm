@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { calculateVolume, dateKey, estimate1RM } from '../lib/calculations';
 import { db } from './client';
-import { exercises, sessionExercises, sessionSets, workoutSessions } from './schema';
+import { exercises, programDays, programs, sessionExercises, sessionSets, workoutSessions } from './schema';
 import { recordMutation } from './mutations';
 
 export type HistorySessionSummary = {
@@ -109,14 +109,47 @@ export async function getWorkoutHistory(userId: string): Promise<HistorySessionS
     setCountBySession.set(s.sessionClientUuid, (setCountBySession.get(s.sessionClientUuid) ?? 0) + 1);
   }
 
+  // Oturumların eksik isimlerini program_days ve programs üzerinden tamamla
+  const dayUuids = Array.from(new Set(sessions.map((s) => s.programDayId).filter((id): id is string => !!id)));
+  const progUuids = Array.from(new Set(sessions.map((s) => s.programId).filter((id): id is string => !!id)));
+
+  const dayMap = new Map<string, string>();
+  if (dayUuids.length > 0) {
+    const dRows = await db.select().from(programDays).where(inArray(programDays.clientUuid, dayUuids));
+    for (const d of dRows) dayMap.set(d.clientUuid, d.name);
+  }
+
+  const progMap = new Map<string, string>();
+  if (progUuids.length > 0) {
+    const pRows = await db.select().from(programs).where(inArray(programs.clientUuid, progUuids));
+    for (const p of pRows) progMap.set(p.clientUuid, p.name);
+  }
+
   return sessions.map((sess) => {
+    let resolvedName = sess.name;
+    if (!resolvedName && sess.programDayId) {
+      const dName = dayMap.get(sess.programDayId);
+      const pName = sess.programId ? progMap.get(sess.programId) : null;
+      if (dName && pName) resolvedName = `${pName} - ${dName}`;
+      else if (dName) resolvedName = dName;
+      else if (pName) resolvedName = pName;
+
+      // Otomatik olarak SQLite'taki boş kaydı da onar
+      if (resolvedName) {
+        db.update(workoutSessions)
+          .set({ name: resolvedName })
+          .where(eq(workoutSessions.clientUuid, sess.clientUuid))
+          .catch(() => {});
+      }
+    }
+
     const duration =
       sess.endedAt && sess.endedAt > sess.startedAt ? sess.endedAt - sess.startedAt : 0;
     const exNames = exBySession.get(sess.clientUuid) ?? [];
 
     return {
       clientUuid: sess.clientUuid,
-      name: sess.name,
+      name: resolvedName,
       startedAt: sess.startedAt,
       endedAt: sess.endedAt,
       durationSeconds: duration,
@@ -140,6 +173,37 @@ export async function getSessionDetail(sessionClientUuid: string): Promise<Sessi
 
   if (sessRows.length === 0) return null;
   const sess = sessRows[0];
+
+  let resolvedSessionName = sess.name;
+  if (!resolvedSessionName && sess.programDayId) {
+    try {
+      const dRows = await db
+        .select()
+        .from(programDays)
+        .where(eq(programDays.clientUuid, sess.programDayId))
+        .limit(1);
+      if (dRows[0]) {
+        if (sess.programId) {
+          const pRows = await db
+            .select()
+            .from(programs)
+            .where(eq(programs.clientUuid, sess.programId))
+            .limit(1);
+          resolvedSessionName = pRows[0] ? `${pRows[0].name} - ${dRows[0].name}` : dRows[0].name;
+        } else {
+          resolvedSessionName = dRows[0].name;
+        }
+        if (resolvedSessionName) {
+          db.update(workoutSessions)
+            .set({ name: resolvedSessionName })
+            .where(eq(workoutSessions.clientUuid, sess.clientUuid))
+            .catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Seans adı çözülemedi:', e);
+    }
+  }
 
   const exRows = await db
     .select({
@@ -208,7 +272,7 @@ export async function getSessionDetail(sessionClientUuid: string): Promise<Sessi
 
   return {
     clientUuid: sess.clientUuid,
-    name: sess.name,
+    name: resolvedSessionName,
     startedAt: sess.startedAt,
     endedAt: sess.endedAt,
     durationSeconds,

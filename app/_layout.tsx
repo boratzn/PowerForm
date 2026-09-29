@@ -25,6 +25,7 @@ import { syncExercisesFromSupabase } from '../src/db/syncExercises';
 import { drainSyncQueue } from '../src/db/syncEngine';
 import { queryClient } from '../src/lib/queryClient';
 import { PaywallModal } from '../src/components/subscription/PaywallModal';
+import { SplashScreenView } from '../src/components/ui';
 import { useAuthStore } from '../src/stores/useAuthStore';
 import { useSessionStore } from '../src/stores/useSessionStore';
 import { useSubscriptionStore } from '../src/stores/useSubscriptionStore';
@@ -125,11 +126,8 @@ export default function RootLayout() {
 
           {/* Navigasyon ağacını unmount etmeden üst katmanda gösterilen yüklenme durumu */}
           {isInitialLoading && (
-            <View
-              style={StyleSheet.absoluteFill}
-              className="items-center justify-center bg-bg-primary z-50"
-            >
-              <Text className="text-text-muted">Hazırlanıyor…</Text>
+            <View style={StyleSheet.absoluteFill} className="z-50">
+              <SplashScreenView />
             </View>
           )}
 

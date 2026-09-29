@@ -57,11 +57,16 @@ export default function WorkoutScreen() {
       return;
     }
 
+    const sessionName = currentDay?.name
+      ? (activeProgram?.name ? `${activeProgram.name} - ${currentDay.name}` : currentDay.name)
+      : (activeProgram?.name || undefined);
+
     router.push({
       pathname: '/session',
       params: {
         programId: activeProgram.clientUuid,
         programDayId: currentDay.clientUuid,
+        sessionName,
       },
     });
   };

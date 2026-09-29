@@ -1,7 +1,7 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, Text, Vibration, View } from 'react-native';
+import { Alert, AppState, ScrollView, Text, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ModernConfirmModal } from '../src/components/ui';
@@ -55,7 +55,7 @@ export default function SessionScreen() {
   const endSession = useSessionStore((s) => s.endSession);
   const resetSession = useSessionStore((s) => s.reset);
 
-  const params = useLocalSearchParams<{ programId?: string; programDayId?: string }>();
+  const params = useLocalSearchParams<{ programId?: string; programDayId?: string; sessionName?: string }>();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [activeField, setActiveField] = useState<ActiveFieldRef>(null);
   const [draftValue, setDraftValue] = useState('');
@@ -91,14 +91,27 @@ export default function SessionScreen() {
             return resumeOrStartSession({
               programId: params.programId,
               programDayId: params.programDayId,
+              sessionName: params.sessionName,
               initialExercises,
             });
           })
           .catch((err) => console.error('[session] resumeOrStartSession hatası:', err));
       } else {
-        resumeOrStartSession().catch((err) => console.error('[session] resumeOrStartSession hatası:', err));
+        resumeOrStartSession({
+          sessionName: params.sessionName,
+        }).catch((err) => console.error('[session] resumeOrStartSession hatası:', err));
       }
     }
+  }, []);
+
+  // Uygulama başka bir uygulamadan geri dönünce (ön plan) sayacı anında gerçek zamana eşle
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        useSessionStore.getState().syncRestTimer();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   // Süre sayacı
@@ -113,7 +126,7 @@ export default function SessionScreen() {
   useEffect(() => {
     if (!restTimer.isRunning) {
       if (wasRestRunning.current) {
-        Vibration.vibrate(400);
+        Vibration.vibrate([0, 500, 200, 500]);
         cancelRestEndNotification();
       }
       wasRestRunning.current = false;
@@ -123,14 +136,6 @@ export default function SessionScreen() {
     const id = setInterval(tickRestTimer, 1000);
     return () => clearInterval(id);
   }, [restTimer.isRunning, tickRestTimer]);
-
-  // Dinlenme sayacı başladığında/uzadığında arka plan bildirimini (yeniden) zamanla
-  useEffect(() => {
-    if (restTimer.isRunning) {
-      scheduleRestEndNotification(restTimer.secondsLeft, t('tab_workout')).catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restTimer.isRunning, restTimer.totalSeconds]);
 
   useEffect(() => {
     return () => {

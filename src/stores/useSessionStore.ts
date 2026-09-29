@@ -1,12 +1,15 @@
 import { and, desc, eq } from 'drizzle-orm';
+import { Vibration } from 'react-native';
 import { create } from 'zustand';
 
 import { calculateVolume, estimate1RM } from '../lib/calculations';
+import { cancelRestEndNotification, scheduleRestEndNotification } from '../lib/restNotification';
 import { generateUuid } from '../lib/uuid';
 import { db } from '../db/client';
 import { recordMutation } from '../db/mutations';
+import { getProgramDayExercises } from '../db/programs';
 import { getBestE1RM, getExerciseById, getLastPerformance, type LocalExercise } from '../db/queries';
-import { sessionExercises, sessionSets, workoutSessions } from '../db/schema';
+import { programDays, programs, sessionExercises, sessionSets, workoutSessions } from '../db/schema';
 import { drainSyncQueue } from '../db/syncEngine';
 import { useAuthStore } from './useAuthStore';
 
@@ -32,12 +35,15 @@ export type ActiveExercise = {
   sets: ActiveSet[];
   lastPerformance: { setIndex: number; weightKg: number | null; reps: number | null; rir: number | null }[];
   runningBestE1RM: number; // seans başlamadan önceki PR + bu seansta şimdiye kadar kırılanlar
+  restSeconds?: number | null;
 };
 
-type RestTimerState = {
+export type RestTimerState = {
   isRunning: boolean;
   secondsLeft: number;
   totalSeconds: number;
+  targetEndTime: number | null;
+  exerciseName?: string | null;
 };
 
 export type InitialExerciseInput = {
@@ -52,6 +58,7 @@ export type InitialExerciseInput = {
 export type StartSessionOptions = {
   programId?: string;
   programDayId?: string;
+  sessionName?: string;
   initialExercises?: InitialExerciseInput[];
 };
 
@@ -77,13 +84,20 @@ type SessionState = {
   reopenSet: (exerciseClientUuid: string, setClientUuid: string) => void;
   deleteSet: (exerciseClientUuid: string, setClientUuid: string) => Promise<void>;
   tickRestTimer: () => void;
+  syncRestTimer: () => void;
   adjustRestTimer: (deltaSeconds: number) => void;
   skipRestTimer: () => void;
   endSession: () => Promise<{ durationSeconds: number; totalVolumeKg: number; prCount: number }>;
   reset: () => void;
 };
 
-const initialRestTimer: RestTimerState = { isRunning: false, secondsLeft: 0, totalSeconds: 0 };
+const initialRestTimer: RestTimerState = {
+  isRunning: false,
+  secondsLeft: 0,
+  totalSeconds: 0,
+  targetEndTime: null,
+  exerciseName: null,
+};
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessionClientUuid: null,
@@ -97,6 +111,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const userId = useAuthStore.getState().session?.user.id;
     if (!userId) throw new Error('startSession: aktif oturum yok');
 
+    let sessionName = opts?.sessionName || null;
+    if (!sessionName && opts?.programDayId) {
+      try {
+        const dayRows = await db
+          .select()
+          .from(programDays)
+          .where(eq(programDays.clientUuid, opts.programDayId))
+          .limit(1);
+        const dayRow = dayRows[0];
+        if (dayRow) {
+          if (opts.programId) {
+            const progRows = await db
+              .select()
+              .from(programs)
+              .where(eq(programs.clientUuid, opts.programId))
+              .limit(1);
+            sessionName = progRows[0] ? `${progRows[0].name} - ${dayRow.name}` : dayRow.name;
+          } else {
+            sessionName = dayRow.name;
+          }
+        }
+      } catch (e) {
+        console.warn('Program adı çözülemedi:', e);
+      }
+    }
+
     const clientUuid = generateUuid();
     const startedAt = Math.floor(Date.now() / 1000);
     await db.insert(workoutSessions).values({
@@ -104,6 +144,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       userId,
       programId: opts?.programId ?? null,
       programDayId: opts?.programDayId ?? null,
+      name: sessionName,
       status: 'in_progress',
       startedAt,
     });
@@ -111,6 +152,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       client_uuid: clientUuid,
       program_id: opts?.programId ?? null,
       program_day_id: opts?.programDayId ?? null,
+      name: sessionName,
       started_at: startedAt,
     });
 
@@ -165,6 +207,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           sets,
           lastPerformance,
           runningBestE1RM: bestE1RM,
+          restSeconds: item.restSeconds ?? null,
         });
       }
     }
@@ -199,6 +242,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       .where(eq(sessionExercises.sessionClientUuid, activeSession.clientUuid))
       .orderBy(sessionExercises.orderIndex);
 
+    const programExs = activeSession.programDayId
+      ? await getProgramDayExercises(activeSession.programDayId)
+      : [];
+    const restMap = new Map(programExs.map((pe) => [pe.exerciseId, pe.restSeconds]));
+
     const hydratedExercises: ActiveExercise[] = [];
     for (const exRow of exerciseRows) {
       const exerciseMeta = await getExerciseById(exRow.exerciseId);
@@ -232,13 +280,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           reps: s.reps,
           rir: s.rir,
           isCompleted: s.isCompleted,
-          // Geçmişe dönük PR rozeti yeniden hesaplanmıyor (isCompleted set'lerin PR
-          // olup olmadığı DB'de saklanmıyor) — sadece bu oturumda ONAYLANACAK yeni
-          // setler için doğru şekilde işaretlenir (runningBestE1RM zaten güncel).
           isPr: false,
         })),
         lastPerformance,
         runningBestE1RM: bestE1RM,
+        restSeconds: restMap.get(exRow.exerciseId) ?? null,
       });
     }
 
@@ -304,6 +350,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ],
       lastPerformance,
       runningBestE1RM: bestE1RM,
+      restSeconds: DEFAULT_REST_SECONDS,
     };
     set({ exercises: [...exercises, newExercise] });
   },
@@ -422,7 +469,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ),
     });
 
-    set({ restTimer: { isRunning: true, secondsLeft: DEFAULT_REST_SECONDS, totalSeconds: DEFAULT_REST_SECONDS } });
+    const restSec =
+      exercise.restSeconds && exercise.restSeconds > 0
+        ? exercise.restSeconds
+        : DEFAULT_REST_SECONDS;
+    const targetEndTime = Date.now() + restSec * 1000;
+    const exerciseDisplayName = exercise.nameTr || exercise.nameEn || 'Sıradaki Set';
+
+    set({
+      restTimer: {
+        isRunning: true,
+        secondsLeft: restSec,
+        totalSeconds: restSec,
+        targetEndTime,
+        exerciseName: exerciseDisplayName,
+      },
+    });
+
+    scheduleRestEndNotification(restSec, exerciseDisplayName).catch(() => {});
   },
 
   // §10.2 kural 8: her şey geri alınabilir. Uzun basma bunu tetikler (bkz. SetRow.tsx).
@@ -455,20 +519,60 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   tickRestTimer: () => {
     const { restTimer } = get();
     if (!restTimer.isRunning) return;
-    const next = restTimer.secondsLeft - 1;
-    if (next <= 0) {
-      set({ restTimer: { ...restTimer, isRunning: false, secondsLeft: 0 } });
-      return;
+    if (restTimer.targetEndTime) {
+      const remaining = Math.max(0, Math.ceil((restTimer.targetEndTime - Date.now()) / 1000));
+      if (remaining <= 0) {
+        set({ restTimer: { ...restTimer, isRunning: false, secondsLeft: 0, targetEndTime: null } });
+        Vibration.vibrate([0, 500, 200, 500]);
+        cancelRestEndNotification().catch(() => {});
+        return;
+      }
+      set({ restTimer: { ...restTimer, secondsLeft: remaining } });
+    } else {
+      const next = restTimer.secondsLeft - 1;
+      if (next <= 0) {
+        set({ restTimer: { ...restTimer, isRunning: false, secondsLeft: 0, targetEndTime: null } });
+        Vibration.vibrate([0, 500, 200, 500]);
+        cancelRestEndNotification().catch(() => {});
+        return;
+      }
+      set({ restTimer: { ...restTimer, secondsLeft: next } });
     }
-    set({ restTimer: { ...restTimer, secondsLeft: next } });
+  },
+
+  syncRestTimer: () => {
+    const { restTimer } = get();
+    if (!restTimer.isRunning || !restTimer.targetEndTime) return;
+    const remaining = Math.max(0, Math.ceil((restTimer.targetEndTime - Date.now()) / 1000));
+    if (remaining <= 0) {
+      set({ restTimer: { ...restTimer, isRunning: false, secondsLeft: 0, targetEndTime: null } });
+      Vibration.vibrate([0, 500, 200, 500]);
+      cancelRestEndNotification().catch(() => {});
+    } else {
+      set({ restTimer: { ...restTimer, secondsLeft: remaining } });
+    }
   },
 
   adjustRestTimer: (deltaSeconds) => {
     const { restTimer } = get();
-    set({ restTimer: { ...restTimer, secondsLeft: Math.max(0, restTimer.secondsLeft + deltaSeconds) } });
+    if (!restTimer.isRunning) return;
+    const newSeconds = Math.max(5, restTimer.secondsLeft + deltaSeconds);
+    const newTarget = Date.now() + newSeconds * 1000;
+    set({
+      restTimer: {
+        ...restTimer,
+        secondsLeft: newSeconds,
+        totalSeconds: Math.max(restTimer.totalSeconds, newSeconds),
+        targetEndTime: newTarget,
+      },
+    });
+    scheduleRestEndNotification(newSeconds, restTimer.exerciseName || 'Antrenman').catch(() => {});
   },
 
-  skipRestTimer: () => set({ restTimer: { ...get().restTimer, isRunning: false, secondsLeft: 0 } }),
+  skipRestTimer: () => {
+    cancelRestEndNotification().catch(() => {});
+    set({ restTimer: { ...get().restTimer, isRunning: false, secondsLeft: 0, targetEndTime: null } });
+  },
 
   endSession: async () => {
     const { sessionClientUuid, startedAt, exercises } = get();

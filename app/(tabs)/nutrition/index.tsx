@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -13,12 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EditFoodEntryModal } from '../../../src/components/nutrition/EditFoodEntryModal';
 import { FoodPickerSheet } from '../../../src/components/nutrition/FoodPickerSheet';
 import { TargetEditorModal } from '../../../src/components/nutrition/TargetEditorModal';
-import { Button, Card } from '../../../src/components/ui';
+import { Button, Card, StatusModal } from '../../../src/components/ui';
 import { colors } from '../../../src/constants/theme';
 import type { NutritionEntryItem } from '../../../src/db/nutrition';
 import { dateKey } from '../../../src/lib/calculations';
 import { useNutritionStore } from '../../../src/stores/useNutritionStore';
 import { useLanguageStore } from '../../../src/stores/useLanguageStore';
+import { useSubscriptionStore } from '../../../src/stores/useSubscriptionStore';
 import type { Language } from '../../../src/lib/i18n';
 
 const MEAL_ICONS: Record<string, string> = {
@@ -49,6 +51,20 @@ export default function NutritionScreen() {
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
 
+  const isPro = useSubscriptionStore((s) => s.isPro);
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall);
+  const isMockMode = useSubscriptionStore((s) => s.isMockMode);
+  const toggleMockPro = useSubscriptionStore((s) => s.toggleMockPro);
+  const [proCelebrationVisible, setProCelebrationVisible] = useState(false);
+
+  const handleToggleMockPro = async () => {
+    const willBePro = !isPro;
+    await toggleMockPro();
+    if (willBePro) {
+      setProCelebrationVisible(true);
+    }
+  };
+
   const selectedDate = useNutritionStore((s) => s.selectedDate);
   const report = useNutritionStore((s) => s.report);
   const isLoading = useNutritionStore((s) => s.isLoading);
@@ -63,8 +79,10 @@ export default function NutritionScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadDailyReport();
-    }, [loadDailyReport])
+      if (isPro) {
+        loadDailyReport();
+      }
+    }, [isPro, loadDailyReport])
   );
 
   const shiftDate = (days: number) => {
@@ -83,6 +101,110 @@ export default function NutritionScreen() {
       },
     ]);
   };
+
+  if (!isPro) {
+    return (
+      <View className="flex-1 bg-bg-primary">
+        <ScrollView
+          className="flex-1 px-lg"
+          contentContainerStyle={{
+            paddingTop: insets.top + 16,
+            paddingBottom: insets.bottom + 32,
+            gap: 20,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Üst Başlık & Kilit Rozeti */}
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-2xl font-bold tracking-tight text-text-primary">
+                {t('nutrition_title')}
+              </Text>
+              <Text className="text-xs text-text-muted">{t('nutrition_subtitle')}</Text>
+            </View>
+            <View className="flex-row items-center gap-1 rounded-full bg-[#F59E0B]/10 px-2.5 py-1 border border-[#F59E0B]/30">
+              <Ionicons name="lock-closed" size={12} color="#F59E0B" />
+              <Text className="text-[11px] font-bold text-[#F59E0B]">
+                {t('pro_feature_locked')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Kilitli Hero Kartı */}
+          <Card className="gap-md border border-[#10B981]/30 bg-bg-surface p-lg">
+            <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#10B981]/15 border border-[#10B981]/30">
+              <Ionicons name="nutrition" size={24} color="#10B981" />
+            </View>
+
+            <View className="gap-xs">
+              <Text className="text-xl font-bold text-text-primary">
+                {t('nutrition_pro_title')}
+              </Text>
+              <Text className="text-xs text-text-muted leading-relaxed">
+                {t('nutrition_pro_desc')}
+              </Text>
+            </View>
+
+            <View className="gap-sm pt-xs border-t border-bg-elevated">
+              {[
+                t('nutrition_feat_1'),
+                t('nutrition_feat_2'),
+                t('nutrition_feat_3'),
+                t('nutrition_feat_4'),
+              ].map((f, i) => (
+                <View key={i} className="flex-row items-center gap-xs">
+                  <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+                  <Text className="text-xs text-text-primary font-medium flex-1">{f}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Button
+              label={t('go_pro')}
+              variant="primary"
+              onPress={openPaywall}
+              className="mt-xs min-h-[50px]"
+            />
+          </Card>
+
+          {/* Test / Simülasyon Kısayolu */}
+          {isMockMode && (
+            <Card className="border border-warning/30 bg-warning/5 p-md gap-xs">
+              <View className="flex-row items-center gap-xs">
+                <Ionicons name="construct-outline" size={14} color={colors.warning} />
+                <Text className="text-xs font-bold text-warning">Geliştirici Modu</Text>
+              </View>
+              <Text className="text-[11px] text-text-muted">
+                RevenueCat anahtarları eklenene kadar aşağıdaki butona basarak Beslenme arayüzünü anında test edebilirsiniz:
+              </Text>
+              <Pressable
+                onPress={handleToggleMockPro}
+                className="mt-xs items-center justify-center rounded-lg bg-warning/20 py-2 border border-warning/30 active:opacity-70"
+              >
+                <Text className="text-xs font-bold text-warning">🟢 Pro Durumunu Simüle Et (Aç)</Text>
+              </Pressable>
+            </Card>
+          )}
+
+          {/* Pro Kutlama Modalı */}
+          <StatusModal
+            visible={proCelebrationVisible}
+            type="pro_celebration"
+            title="Tebrikler! Powerform PRO Aktif"
+            badgeText="PRO ÜYE"
+            message="Beslenme & Makro takibi ve AI Koç dahil tüm gelişmiş özelliklerin kilidi açıldı."
+            features={[
+              'Günlük kalori & makro hedefleri',
+              'Geniş Türkçe besin veri tabanı',
+              'Akıllı AI Koç & Progressive Overload analizi',
+            ]}
+            primaryButtonText="Harika, Başla!"
+            onPrimaryPress={() => setProCelebrationVisible(false)}
+          />
+        </ScrollView>
+      </View>
+    );
+  }
 
   const targetKcal = report?.targets.kcal || 2400;
   const consumedKcal = report?.totalKcal || 0;

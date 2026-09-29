@@ -5,3 +5,4 @@ export { Input } from './Input';
 export { ToastBanner } from './ToastBanner';
 export { StatusModal, type StatusModalType } from './StatusModal';
 export { ModernConfirmModal } from './ModernConfirmModal';
+export { SplashScreenView } from './SplashScreenView';

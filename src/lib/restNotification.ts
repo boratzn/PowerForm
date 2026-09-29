@@ -40,8 +40,11 @@ async function ensurePermission(): Promise<boolean> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('rest-timer', {
       name: 'Dinlenme sayacı',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 500, 200, 500],
+      sound: 'default',
+      enableVibrate: true,
+      showBadge: false,
     });
   }
   if (permissionRequested) return true;
@@ -60,9 +63,10 @@ export async function scheduleRestEndNotification(seconds: number, exerciseName:
     if (!granted) return; // sessizce vazgeç — ön plan sayacı zaten çalışıyor
     scheduledId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Dinlenme bitti',
-        body: `${exerciseName} — sıradaki sete hazır ol.`,
+        title: '⏰ Dinlenme Süresi Bitti!',
+        body: `${exerciseName || 'Sıradaki set'} seni bekliyor, haydi başla!`,
         sound: true,
+        vibrate: [0, 500, 200, 500],
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
