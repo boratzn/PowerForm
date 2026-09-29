@@ -71,13 +71,19 @@ export default function ProgramEditorScreen() {
   const [saving, setSaving] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const exercisesContainerYRef = useRef(0);
+  const cardLayoutsRef = useRef<Record<string, number>>({});
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(300);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
+      (e) => {
         setIsKeyboardVisible(true);
+        if (e.endCoordinates?.height) {
+          setKeyboardHeight(e.endCoordinates.height);
+        }
       }
     );
     const hideSub = Keyboard.addListener(
@@ -91,6 +97,19 @@ export default function ProgramEditorScreen() {
       hideSub.remove();
     };
   }, []);
+
+  const scrollToExercise = (tempId: string) => {
+    const containerY = exercisesContainerYRef.current || 0;
+    const cardY = cardLayoutsRef.current[tempId] || 0;
+    const targetY = Math.max(0, containerY + cardY - 20);
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: targetY,
+        animated: true,
+      });
+    }, 80);
+  };
 
   // Form states
   const [name, setName] = useState('');
@@ -330,8 +349,8 @@ export default function ProgramEditorScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-bg-primary"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
     >
       <ScrollView
         ref={scrollViewRef}
@@ -339,7 +358,7 @@ export default function ProgramEditorScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: 16,
-          paddingBottom: isKeyboardVisible ? 140 : insets.bottom + 100,
+          paddingBottom: isKeyboardVisible ? Math.max(340, keyboardHeight + 80) : insets.bottom + 100,
           gap: 16,
         }}
       >
@@ -503,7 +522,12 @@ export default function ProgramEditorScreen() {
             </Card>
 
             {/* Egzersiz Listesi */}
-            <View className="gap-xs">
+            <View
+              className="gap-xs"
+              onLayout={(e) => {
+                exercisesContainerYRef.current = e.nativeEvent.layout.y;
+              }}
+            >
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm font-bold text-text-primary">
                   Egzersizler ({activeDay.exercises.length})
@@ -531,7 +555,13 @@ export default function ProgramEditorScreen() {
                   const displayName = item.nameTr || item.nameEn;
 
                   return (
-                    <Card key={item.tempId} className="gap-sm">
+                    <View
+                      key={item.tempId}
+                      onLayout={(e) => {
+                        cardLayoutsRef.current[item.tempId] = e.nativeEvent.layout.y;
+                      }}
+                    >
+                      <Card className="gap-sm">
                       {/* Başlık & Silme */}
                       <View className="flex-row items-center justify-between">
                         <Pressable
@@ -579,9 +609,13 @@ export default function ProgramEditorScreen() {
                           <Text className="text-[10px] text-text-muted">Hedef Set</Text>
                           <TextInput
                             keyboardType="numeric"
+                            returnKeyType="done"
+                            selectTextOnFocus
                             value={item.targetSets !== null && item.targetSets !== undefined ? String(item.targetSets) : ''}
                             placeholder="3"
                             placeholderTextColor={colors.textMuted}
+                            onFocus={() => scrollToExercise(item.tempId)}
+                            onSubmitEditing={Keyboard.dismiss}
                             onChangeText={(val) =>
                               updateExerciseField(item.tempId, 'targetSets', val)
                             }
@@ -593,9 +627,13 @@ export default function ProgramEditorScreen() {
                           <Text className="text-[10px] text-text-muted">Min Tekrar</Text>
                           <TextInput
                             keyboardType="numeric"
+                            returnKeyType="done"
+                            selectTextOnFocus
                             value={item.repMin !== null && item.repMin !== undefined ? String(item.repMin) : ''}
                             placeholder="8"
                             placeholderTextColor={colors.textMuted}
+                            onFocus={() => scrollToExercise(item.tempId)}
+                            onSubmitEditing={Keyboard.dismiss}
                             onChangeText={(val) =>
                               updateExerciseField(item.tempId, 'repMin', val)
                             }
@@ -607,9 +645,13 @@ export default function ProgramEditorScreen() {
                           <Text className="text-[10px] text-text-muted">Max Tekrar</Text>
                           <TextInput
                             keyboardType="numeric"
+                            returnKeyType="done"
+                            selectTextOnFocus
                             value={item.repMax !== null && item.repMax !== undefined ? String(item.repMax) : ''}
                             placeholder="12"
                             placeholderTextColor={colors.textMuted}
+                            onFocus={() => scrollToExercise(item.tempId)}
+                            onSubmitEditing={Keyboard.dismiss}
                             onChangeText={(val) =>
                               updateExerciseField(item.tempId, 'repMax', val)
                             }
@@ -621,9 +663,13 @@ export default function ProgramEditorScreen() {
                           <Text className="text-[10px] text-text-muted">Hedef RIR</Text>
                           <TextInput
                             keyboardType="numeric"
+                            returnKeyType="done"
+                            selectTextOnFocus
                             value={item.targetRir !== null && item.targetRir !== undefined ? String(item.targetRir) : ''}
                             placeholder="-"
                             placeholderTextColor={colors.textMuted}
+                            onFocus={() => scrollToExercise(item.tempId)}
+                            onSubmitEditing={Keyboard.dismiss}
                             onChangeText={(val) =>
                               updateExerciseField(
                                 item.tempId,
@@ -639,9 +685,13 @@ export default function ProgramEditorScreen() {
                           <Text className="text-[10px] text-text-muted">Mola (sn)</Text>
                           <TextInput
                             keyboardType="numeric"
+                            returnKeyType="done"
+                            selectTextOnFocus
                             value={item.restSeconds !== null && item.restSeconds !== undefined ? String(item.restSeconds) : ''}
                             placeholder="90"
                             placeholderTextColor={colors.textMuted}
+                            onFocus={() => scrollToExercise(item.tempId)}
+                            onSubmitEditing={Keyboard.dismiss}
                             onChangeText={(val) =>
                               updateExerciseField(item.tempId, 'restSeconds', val)
                             }
@@ -650,6 +700,7 @@ export default function ProgramEditorScreen() {
                         </View>
                       </View>
                     </Card>
+                    </View>
                   );
                 })
               )}
