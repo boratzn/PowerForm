@@ -86,6 +86,13 @@ export function WeightQuickEntry({ todayEntry, previousEntry, onSave }: WeightQu
           {t('last_measurement')}: {previousEntry.weightKg} kg ({previousEntry.loggedOn})
         </Text>
       )}
+
+      <View className="pt-2 mt-1 border-t border-white/5 flex-row items-center justify-between">
+        <Text className="text-[11px] text-text-muted">{t('body_measurements_title')}</Text>
+        <Pressable onPress={() => router.push('/body-measurements')} className="active:opacity-70">
+          <Text className="text-[11px] font-semibold text-accent">{t('chart_trend')}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

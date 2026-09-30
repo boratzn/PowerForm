@@ -49,6 +49,8 @@ export default function WeightTrendScreen() {
   const [loading, setLoading] = useState(true);
   const [weightInput, setWeightInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const todayKey = dateKey(new Date());
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
   const [deleteTarget, setDeleteTarget] = useState<{ clientUuid: string; dateStr: string } | null>(null);
 
   const loadData = useCallback(() => {
@@ -107,8 +109,6 @@ export default function WeightTrendScreen() {
   const maxWeight = trend?.maxWeight ?? 80;
   const range = Math.max(1, maxWeight - minWeight);
 
-  const todayKey = dateKey(new Date());
-
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-bg-primary"
@@ -120,7 +120,7 @@ export default function WeightTrendScreen() {
         style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
       >
         {/* Üst Bar: Başlık ve Kapatma */}
-        <View className="mb-md flex-row items-center justify-between">
+        <View className="mb-sm flex-row items-center justify-between">
           <View>
             <Text className="text-xl font-bold text-text-primary">{t('weight_tracking_header')}</Text>
             <Text className="text-xs text-text-muted">{t('moving_avg_7d')}</Text>
@@ -130,6 +130,19 @@ export default function WeightTrendScreen() {
             className="h-10 w-10 items-center justify-center rounded-full bg-bg-card active:opacity-70"
           >
             <Text className="text-xl text-text-muted">×</Text>
+          </Pressable>
+        </View>
+
+        {/* Sekme Geçişi: Kilo Takibi <-> Vücut Ölçüleri */}
+        <View className="flex-row rounded-xl bg-bg-card p-1 mb-md border border-white/5">
+          <Pressable className="flex-1 py-2 items-center rounded-lg bg-bg-elevated shadow-sm border border-accent/20">
+            <Text className="text-xs font-bold text-accent">{t('weight_tracking_header')}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.replace('/body-measurements')}
+            className="flex-1 py-2 items-center rounded-lg active:opacity-70"
+          >
+            <Text className="text-xs font-semibold text-text-muted">{t('body_measurements_title')}</Text>
           </Pressable>
         </View>
 
@@ -227,18 +240,55 @@ export default function WeightTrendScreen() {
                 <Text className="text-xs text-text-muted">{t('no_weight_data_yet')}</Text>
               </View>
             ) : (
-              <View className="h-48 pt-sm">
+              <View className="h-52 pt-md">
                 {/* Grafik çubukları ve noktaları */}
                 <View className="flex-1 flex-row items-end justify-between gap-1 pb-2 border-b border-bg-elevated">
-                  {trend.points.map((pt, idx) => {
+                  {trend.points.map((pt) => {
                     const weightHeightRatio =
                       pt.weightKg != null ? (pt.weightKg - minWeight) / range : 0;
                     const maHeightRatio =
                       pt.movingAverage7d != null ? (pt.movingAverage7d - minWeight) / range : 0;
                     const isToday = pt.dateStr === todayKey;
+                    const isSelected = pt.dateStr === selectedDate;
+                    const showWeightBadge = (isToday || isSelected) && pt.weightKg != null;
 
                     return (
-                      <View key={pt.dateStr} className="flex-1 items-center justify-end h-full">
+                      <Pressable
+                        key={pt.dateStr}
+                        onPress={() => {
+                          if (pt.weightKg != null) setSelectedDate(pt.dateStr);
+                        }}
+                        className="flex-1 items-center justify-end h-full"
+                      >
+                        {/* O günün (veya seçilen günün) çubuğunun tepesindeki küçük kilo yazısı */}
+                        {showWeightBadge && (
+                          <View
+                            pointerEvents="none"
+                            style={{
+                              position: 'absolute',
+                              bottom: `${Math.min(84, Math.max(14, weightHeightRatio * 100)) + 5}%`,
+                              alignItems: 'center',
+                              zIndex: 30,
+                            }}
+                          >
+                            <View
+                              className={`rounded px-1 py-0.5 shadow-sm ${
+                                isToday
+                                  ? 'bg-accent border border-accent'
+                                  : 'bg-bg-elevated border border-accent/40'
+                              }`}
+                            >
+                              <Text
+                                className={`text-[9px] font-extrabold leading-none ${
+                                  isToday ? 'text-[#0B0F14]' : 'text-accent'
+                                }`}
+                              >
+                                {pt.weightKg}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
                         {/* 7 Günlük MA Noktası */}
                         {pt.movingAverage7d != null && (
                           <View
@@ -253,16 +303,20 @@ export default function WeightTrendScreen() {
                         {pt.weightKg != null ? (
                           <View
                             className={`w-full max-w-[14px] rounded-t-sm ${
-                              isToday ? 'bg-accent/70' : 'bg-bg-elevated'
+                              isToday
+                                ? 'bg-accent'
+                                : isSelected
+                                ? 'bg-accent/80'
+                                : 'bg-bg-elevated'
                             }`}
                             style={{
-                              height: `${Math.min(95, Math.max(8, weightHeightRatio * 100))}%`,
+                              height: `${Math.min(85, Math.max(8, weightHeightRatio * 100))}%`,
                             }}
                           />
                         ) : (
                           <View className="h-1 w-1 rounded-full bg-bg-elevated/40" />
                         )}
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>

@@ -22,11 +22,12 @@ import migrations from '../src/db/migrations/migrations';
 import { seedLocalExercisesIfEmpty } from '../src/db/seedExercises';
 import { seedLocalFoodsIfEmpty } from '../src/db/nutrition';
 import { syncExercisesFromSupabase } from '../src/db/syncExercises';
-import { drainSyncQueue } from '../src/db/syncEngine';
+import { drainSyncQueue, pullUserDataFromSupabase } from '../src/db/syncEngine';
 import { queryClient } from '../src/lib/queryClient';
 import { PaywallModal } from '../src/components/subscription/PaywallModal';
 import { SplashScreenView } from '../src/components/ui';
 import { useAuthStore } from '../src/stores/useAuthStore';
+import { useProgramStore } from '../src/stores/useProgramStore';
 import { useSessionStore } from '../src/stores/useSessionStore';
 import { useSubscriptionStore } from '../src/stores/useSubscriptionStore';
 import { useLanguageStore } from '../src/stores/useLanguageStore';
@@ -83,6 +84,13 @@ export default function RootLayout() {
       .initialize(session.user.id)
       .catch((err) => console.warn('[RootLayout] Abonelik başlatma hatası:', err));
 
+    // Buluttaki antrenman geçmişini ve kullanıcı verilerini yerel SQLite'a çek
+    pullUserDataFromSupabase(session.user.id)
+      .then(() => {
+        useProgramStore.getState().initialize();
+      })
+      .catch((err) => console.warn('[RootLayout] Buluttan veri çekme hatası:', err));
+
     // Çevrimdışı yapılan işlemleri Supabase ile eşitle (§12.4)
     drainSyncQueue().catch((err) => console.warn('[RootLayout] Senkron kuyruğu hatası:', err));
   }, [migrationsReady, session]);
@@ -119,6 +127,7 @@ export default function RootLayout() {
             {/* Seans ekranı tam ekran modal — sekme çubuğu otomatik gizlenir (§10.2, §11) */}
             <Stack.Screen name="session" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="weight-trend" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="body-measurements" options={{ presentation: 'modal' }} />
             <Stack.Screen name="legal" options={{ presentation: 'modal' }} />
             <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
           </Stack>

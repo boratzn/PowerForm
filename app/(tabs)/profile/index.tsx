@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Modal,
   Pressable,
@@ -18,6 +19,8 @@ import { getLifetimeStats, type LifetimeStats } from '../../../src/db/profileSta
 import { deleteUserAccountAndData } from '../../../src/lib/accountDeletion';
 import { exportAllUserData } from '../../../src/lib/dataExport';
 import { useAuthStore } from '../../../src/stores/useAuthStore';
+import { useProgramStore } from '../../../src/stores/useProgramStore';
+import { drainSyncQueue, pullUserDataFromSupabase } from '../../../src/db/syncEngine';
 import { formatDurationHuman } from '../../../src/lib/calculations';
 import { useSubscriptionStore } from '../../../src/stores/useSubscriptionStore';
 import { useLanguageStore } from '../../../src/stores/useLanguageStore';
@@ -129,6 +132,28 @@ export default function ProfileScreen() {
       }
     }, [loadData, session?.user.id])
   );
+
+  const [syncing, setSyncing] = useState(false);
+
+  const handleCloudSync = async () => {
+    if (!session?.user?.id) return;
+    setSyncing(true);
+    try {
+      const res = await pullUserDataFromSupabase(session.user.id);
+      await drainSyncQueue();
+      await useAuthStore.getState().refreshProfile();
+      loadData();
+      useProgramStore.getState().initialize();
+      Alert.alert(
+        'Eşitleme Tamamlandı',
+        `Buluttan ${res.sessionsCount} antrenman seansı, ${res.weightsCount} kilo kaydı ve ${res.nutritionCount} beslenme kaydı başarıyla cihazınıza yüklendi.`
+      );
+    } catch (err: any) {
+      Alert.alert('Eşitleme Hatası', err?.message || 'Bulut verileri eşitlenirken bir hata oluştu.');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleExportData = async () => {
     setExporting(true);
@@ -463,6 +488,21 @@ export default function ProfileScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => router.push('/body-measurements')}
+            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
+          >
+            <View>
+              <Text className="text-sm font-semibold text-text-primary">
+                {t('body_measurements_title')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('body_measurements_desc')}
+              </Text>
+            </View>
+            <Text className="text-base text-accent font-bold">→</Text>
+          </Pressable>
+
+          <Pressable
             onPress={() => router.push('/workout/history')}
             className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
           >
@@ -525,6 +565,30 @@ export default function ProfileScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
+          </Pressable>
+
+          <Pressable
+            onPress={handleCloudSync}
+            disabled={syncing}
+            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
+          >
+            <View className="flex-1 mr-sm">
+              <Text className="text-sm font-semibold text-text-primary">
+                {syncing
+                  ? (language === 'tr' ? 'Buluttan Eşitleniyor...' : 'Syncing from Cloud...')
+                  : (language === 'tr' ? 'Bulut Verilerini Eşitle' : 'Sync Cloud Data')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {language === 'tr'
+                  ? 'Antrenman geçmişi, kilo ve beslenme kayıtlarını buluttan geri yükler'
+                  : 'Restore workout history, weight, and nutrition logs from the cloud'}
+              </Text>
+            </View>
+            {syncing ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Ionicons name="cloud-download-outline" size={18} color={colors.accent} />
+            )}
           </Pressable>
         </Card>
       </View>

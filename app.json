@@ -21,6 +21,9 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "com.android.vending.BILLING"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -33,7 +36,8 @@
       "expo-secure-store",
       "expo-notifications",
       "expo-image",
-      "expo-localization"
+      "expo-localization",
+      "expo-sharing"
     ]
   }
 }

@@ -106,6 +106,31 @@ export const bodyWeightLogs = sqliteTable(
   (t) => [unique().on(t.userId, t.loggedOn)]
 );
 
+// Vücut ölçüleri takibi (007_body.sql yerel aynası: kol, göğüs, bel, bacak, kalf vb.)
+export const bodyMeasurements = sqliteTable(
+  'body_measurements',
+  {
+    clientUuid: text('client_uuid').primaryKey(),
+    userId: text('user_id').notNull(),
+    loggedOn: text('logged_on').notNull(), // YYYY-MM-DD
+    neckCm: real('neck_cm'),
+    shoulderCm: real('shoulder_cm'),
+    chestCm: real('chest_cm'),
+    waistCm: real('waist_cm'),
+    hipCm: real('hip_cm'),
+    armLeftCm: real('arm_left_cm'),
+    armRightCm: real('arm_right_cm'),
+    forearmCm: real('forearm_cm'),
+    thighCm: real('thigh_cm'),
+    calfCm: real('calf_cm'),
+    syncedAt: integer('synced_at'),
+    createdAt: integer('created_at')
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [unique().on(t.userId, t.loggedOn)]
+);
+
 // Senkron kuyruğu (§12.4) — her yerel yazma bir mutation kaydı üretir
 export const syncMutations = sqliteTable('sync_mutations', {
   id: text('id').primaryKey(), // = client_uuid
