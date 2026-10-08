@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card } from '../../../../src/components/ui';
@@ -21,7 +22,7 @@ const GOAL_LABELS: Record<string, { label: string; color: string }> = {
 export default function TemplateDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { templateId } = useLocalSearchParams<{ templateId: string }>();
+  const { templateId, from } = useLocalSearchParams<{ templateId: string; from?: string }>();
 
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
@@ -33,6 +34,25 @@ export default function TemplateDetailScreen() {
 
   const activateProgram = useProgramStore((s) => s.activateProgram);
   const cloneAndActivateTemplate = useProgramStore((s) => s.cloneAndActivateTemplate);
+
+  const handleGoBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else if (from === 'profile') {
+      router.navigate('/(tabs)/profile');
+    } else {
+      router.navigate('/workout/templates');
+    }
+  }, [from, router]);
+
+  useEffect(() => {
+    if (from !== 'profile') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleGoBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [from, handleGoBack]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -99,7 +119,7 @@ export default function TemplateDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg-primary">
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text className="mt-md text-sm text-text-muted">Program yükleniyor...</Text>
+        <Text className="mt-md text-sm text-text-muted">{t('loading')}</Text>
       </View>
     );
   }
@@ -107,8 +127,8 @@ export default function TemplateDetailScreen() {
   if (!program) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-primary p-lg">
-        <Text className="text-base text-text-muted">Şablon bulunamadı.</Text>
-        <Button label="Geri Dön" variant="secondary" className="mt-md" onPress={() => router.back()} />
+        <Text className="text-base text-text-muted">{t('no_results')}</Text>
+        <Button label={t('back_btn')} variant="secondary" className="mt-md" onPress={() => router.back()} />
       </View>
     );
   }
@@ -117,6 +137,15 @@ export default function TemplateDetailScreen() {
 
   return (
     <View className="flex-1 bg-bg-primary">
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Pressable onPress={handleGoBack} hitSlop={12} className="mr-3 p-1 active:opacity-70">
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView
         className="flex-1 px-lg"
         contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 100, gap: 16 }}
@@ -230,7 +259,16 @@ export default function TemplateDetailScreen() {
 
                 return (
                   <Card key={item.clientUuid} className="gap-sm">
-                    <View className="flex-row items-center gap-md">
+                    {/* Tıklanınca Egzersiz Detayına Git */}
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: `/library/${item.exerciseId}`,
+                          params: { from: 'workout' },
+                        })
+                      }
+                      className="flex-row items-center gap-md active:opacity-75"
+                    >
                       {/* Küçük GIF/Thumbnail Önizleme */}
                       <View className="h-14 w-14 overflow-hidden rounded-md bg-bg-card">
                         <Image
@@ -247,6 +285,7 @@ export default function TemplateDetailScreen() {
                           <Text className="flex-1 text-base font-semibold text-text-primary" numberOfLines={1}>
                             {displayName}
                           </Text>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
                         {ex.nameTr && (
                           <Text className="text-xs text-text-muted" numberOfLines={1}>
@@ -263,7 +302,7 @@ export default function TemplateDetailScreen() {
                           <Text className="text-[10px] capitalize text-text-muted">{ex.equipment}</Text>
                         </View>
                       </View>
-                    </View>
+                    </Pressable>
 
                     {/* Hedef Set / Tekrar / RIR / Dinlenme Paneli */}
                     <View className="flex-row flex-wrap items-center gap-xs rounded-md bg-bg-elevated/50 p-xs px-sm">

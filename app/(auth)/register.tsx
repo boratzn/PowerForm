@@ -16,10 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../src/constants/theme';
 import { supabase } from '../../src/lib/supabase';
+import { useLanguageStore } from '../../src/stores/useLanguageStore';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useLanguageStore((s) => s.t);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,12 +60,12 @@ export default function RegisterScreen() {
     if (!email.trim() || !password) return;
 
     if (password.length < 6) {
-      setError('Şifre en az 6 karakter olmalıdır.');
+      setError(t('password_min_length'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Girdiğiniz şifreler birbiriyle eşleşmiyor.');
+      setError(t('passwords_dont_match'));
       return;
     }
 
@@ -98,18 +100,18 @@ export default function RegisterScreen() {
           </View>
 
           <Text className="text-xl font-extrabold text-text-primary text-center">
-            E-postanı Kontrol Et 📩
+            {t('check_email_title')}
           </Text>
 
           <Text className="text-xs text-text-muted text-center mt-2 leading-relaxed">
-            <Text className="font-semibold text-text-primary">{email}</Text> adresine bir aktivasyon bağlantısı gönderdik. Hesabını onayladıktan sonra giriş yapabilirsin.
+            <Text className="font-semibold text-text-primary">{email}</Text> {t('check_email_desc')}
           </Text>
 
           <Pressable
             onPress={() => router.replace('/login')}
             className="w-full min-h-[48px] items-center justify-center rounded-xl bg-accent mt-6 active:opacity-85 shadow-lg shadow-accent/25"
           >
-            <Text className="text-sm font-bold text-[#0B0F14]">Giriş Ekranına Dön</Text>
+            <Text className="text-sm font-bold text-[#0B0F14]">{t('back_to_login')}</Text>
           </Pressable>
         </View>
       </View>
@@ -142,16 +144,16 @@ export default function RegisterScreen() {
             POWER<Text className="text-accent">FORM</Text>
           </Text>
           <Text className="text-xs text-text-muted mt-1 font-medium text-center">
-            Yeni nesil akıllı antrenman asistanı
+            {t('brand_slogan')}
           </Text>
         </View>
 
         {/* KAYIT FORMU KARTI */}
         <View className="rounded-3xl bg-bg-surface border border-white/10 p-6 shadow-xl shadow-black/40 gap-4">
           <View>
-            <Text className="text-xl font-extrabold text-text-primary">Hesap Oluştur</Text>
+            <Text className="text-xl font-extrabold text-text-primary">{t('register_title')}</Text>
             <Text className="text-xs text-text-muted mt-0.5">
-              Güç, hipertrofi ve form takibine hemen başla
+              {t('register_subtitle')}
             </Text>
           </View>
 
@@ -165,7 +167,7 @@ export default function RegisterScreen() {
 
           {/* E-POSTA ALANI */}
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold text-text-muted">E-posta</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('email_label')}</Text>
             <View
               className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                 isEmailFocused ? 'border-accent bg-bg-elevated/90' : 'border-white/10'
@@ -194,7 +196,7 @@ export default function RegisterScreen() {
 
           {/* ŞİFRE ALANI */}
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold text-text-muted">Şifre</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('password_label')}</Text>
             <View
               className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                 isPasswordFocused ? 'border-accent bg-bg-elevated/90' : 'border-white/10'
@@ -206,7 +208,7 @@ export default function RegisterScreen() {
                 color={isPasswordFocused ? colors.accent : colors.textMuted}
               />
               <TextInput
-                placeholder="En az 6 karakter"
+                placeholder="••••••••"
                 placeholderTextColor="#6B7A8C"
                 secureTextEntry={!showPassword}
                 value={password}
@@ -237,7 +239,7 @@ export default function RegisterScreen() {
 
           {/* ŞİFRE TEKRAR ALANI */}
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold text-text-muted">Şifre Tekrar</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('confirm_password_label')}</Text>
             <View
               className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                 isConfirmPasswordFocused ? 'border-accent bg-bg-elevated/90' : 'border-white/10'
@@ -249,7 +251,7 @@ export default function RegisterScreen() {
                 color={isConfirmPasswordFocused ? colors.accent : colors.textMuted}
               />
               <TextInput
-                placeholder="Şifrenizi tekrar girin"
+                placeholder="••••••••"
                 placeholderTextColor="#6B7A8C"
                 secureTextEntry={!showPassword}
                 value={confirmPassword}
@@ -279,21 +281,21 @@ export default function RegisterScreen() {
             {loading ? (
               <ActivityIndicator size="small" color="#0B0F14" />
             ) : (
-              <Text className="text-sm font-bold text-[#0B0F14]">Hesap Oluştur 🚀</Text>
+              <Text className="text-sm font-bold text-[#0B0F14]">{t('register_title')} 🚀</Text>
             )}
           </Pressable>
         </View>
 
         {/* GİRİŞ YAP YÖNLENDİRMESİ */}
         <View className="flex-row items-center justify-center gap-1.5 mt-8">
-          <Text className="text-xs text-text-muted">Zaten bir hesabın var mı?</Text>
+          <Text className="text-xs text-text-muted">{t('already_have_account')}</Text>
           <Pressable
             hitSlop={8}
             onPress={() => router.push('/login')}
             disabled={loading}
             className="py-1 px-1.5"
           >
-            <Text className="text-xs font-bold text-accent">Giriş Yap</Text>
+            <Text className="text-xs font-bold text-accent">{t('login_title')}</Text>
           </Pressable>
         </View>
       </ScrollView>

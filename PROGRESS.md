@@ -5,9 +5,41 @@
 > bölümünü okusun. Tam şartname 2061 satır — tamamını okumak yerine bölüm indeksinden
 > (`grep -n "^# [0-9]" docs/FITNESS_APP_SPEC.md`) ilgili aralığı `sed -n` ile al.
 
-Son güncelleme: 2026-09-27 (v1.0.6)
+Son güncelleme: 2026-10-08 (v1.0.7 - AI Yemek Tanıma, Gelecekteki Sen Simülasyonu, Dönüşüm Kartı)
 
 ## Hata Düzeltmeleri ve Eklemeler (Son Yapılanlar)
+-1. **3 Yeni Ana Özellik Geliştirmesi (v1.0.7):**
+    - **1. Fotoğraftan Yemek Tanıma (AI Food Vision & Macro Estimation) — TAMAMLANDI:**
+      - `expo-image-picker` SDK 57 uyumlu kuruldu; kamera çekimi ve galeri seçimi (`launchCameraAsync`, `launchImageLibraryAsync`, base64 modu) sağlandı.
+      - `src/services/foodVision.ts`: Gemini Multimodal Vision API (`gemini-flash-latest`, `gemini-3.1-flash-lite`, `gemini-flash-lite-latest`, `gemini-3.8-flash` yedekli) ile tabağı analiz eden, tabaktaki her besini, porsiyon açıklamasını, tahmini gramajı, kalori ve makroları (protein, karb, yağ) JSON olarak çıkaran yapay zeka servisi yazıldı.
+      - `src/components/nutrition/FoodVisionModal.tsx`: Koyu karbon cam animasyonlu tarayıcı (lazer tarama çizgisi), fotoğraf önizlemesi, tespit edilen besin listesi, canlı +/- 20g gramaj stepper'ı (makrolar orantısal anlık güncellenir), besin silme, öğün seçici (Kahvaltı, Öğle, Akşam, Ara Öğün) ve tek tıkla SQLite + Supabase'e ekleme (`useNutritionStore.addFoodEntry`) tamamlandı.
+      - Koyu tema uyumu: Modal arka planı ve tüm katmanlar uygulamanın koyu karbon (`#0B0F14` / `bg-bg-primary`) temasına tam uyumlu hale getirildi.
+      - `app/(tabs)/nutrition/index.tsx`: Üst bölüme modern AI kamera tarama banner'ı ve her öğün kartına `AI` kamera butonu eklendi.
+      - `src/components/nutrition/FoodPickerSheet.tsx`: Besin arama sayfasının üstüne doğrudan "📸 Fotoğraftan Tanı (AI)" hızlı geçiş butonu eklendi.
+      - TR, EN, DE, ES 4 dil desteği `src/lib/i18n.ts`'e eklendi. `npx tsc --noEmit` ile 0 hata doğrulandı.
+    - **2. Gelecekteki Sen Simülasyonu (Future You 90-Day Projection) — TAMAMLANDI:**
+      - `src/services/futureSimulation.ts`: Kullanıcının yerel SQLite'taki tartı geçmişi (`bodyWeightLogs`), vücut ölçüleri (`bodyMeasurements`), beslenme hedefleri ve profildeki ana hedefi (`fat_loss`, `hypertrophy`, `recomp`, `strength`, `general_health`) baz alınarak 90 günlük bilimsel kilo, yağ oranı, bel, kol ve göğüs ölçüsü projeksiyon motoru yazıldı.
+      - 3 farklı sadakat/ritim modu (%65 Esnek, %85 İstikrarlı, %100 Maksimum Disiplin) ile anlık dinamik hesaplama desteği.
+      - `app/future-simulation.tsx`:
+        - Koyu şık arayüzde Şimdi (Başlangıç) vs 90 Gün Sonra karşılaştırma kartları (Kilo ▲/▼, Yağ Oranı %, Bel cm, Kol cm).
+        - `react-native-svg` ile çizilen interaktif 90 günlük ağırlık seyri eğrisi (alan degrade dolgusu, dönüm noktası daireleri ve kilo etiketleri).
+        - 3 Aşamalı Dönüşüm Yol Haritası (1. Ay: Ödem & Alışkanlık Uyumu, 2. Ay: Kas/Yağ Ayrışması, 3. Ay: Zirve Form).
+        - Kas proteini sentezi (MPS) ve metabolik adaptasyonu özetleyen bilimsel analiz kartı.
+      - Profil sekmesi (`app/(tabs)/profile/index.tsx`), AI Koç sekmesi (`app/(tabs)/coach/index.tsx`) ve Kilo Trendi ekranına (`app/weight-trend.tsx`) doğrudan bağlantı butonları entegre edildi.
+      - TR, EN, DE, ES dilleri uygulandı. `npx tsc --noEmit` temiz doğrulandı.
+    - **3. Dönüşüm Kartı (Before/After Transformation Card & Social Sharing) — TAMAMLANDI:**
+      - `react-native-view-shot` ve `expo-sharing` SDK 57 uyumlu kuruldu; React Native hiyerarşisini doğrudan 1.0 kalitede PNG çıktısına dönüştürme ve sistem paylaşım menüsü üzerinden paylaşma altyapısı kuruldu.
+      - `app/transformation-card.tsx`:
+        - Öncesi (Before) ve Sonrası (After) fotoğraflarını cihaz galerisinden kırpma ve canlı önizleme (`expo-image-picker`).
+        - Format seçici: **Instagram Story (9:16)** ve **Instagram Post (1:1)**.
+        - Düzen seçici: **Yan Yana (Side by Side)** ve **Alt Alta (Stacked)**.
+        - Lüks tema vurgu rengi seçici: **Zümrüt Yeşili (#4ADE80)**, **Power Altın (#F59E0B)**, **Siyan (#38BDF8)**, **Kızıl (#F87171)**.
+        - Gerçek kullanıcı istatistikleri rozeti: Başlangıç vs Güncel Kilo farkı (`84.5 kg ➔ 77.2 kg (-7.3 kg)`), Aktif Seri (`🔥 18 Gün`), Toplam Seans (`🏋️ 42 Seans`), sporcu adı ve tarih dökümü.
+        - "Instagram’da Paylaş 🚀" butonu: `captureRef` ile anlık yüksek çözünürlüklü görüntü oluşturup Instagram Hikayeler/Gönderi/WhatsApp/Galeri paylaşım penceresini açar.
+        - **Hata Düzeltildi (Layout Değiştirme Çökmesi):** "Alt Alta" / "Yan Yana" butonlarına basıldığında NativeWind v4'ün dinamik `shadow` ve layout interpolasyonları nedeniyle React Navigation bağlamını kaybetmesi (`Couldn't find a navigation context`) hatası giderildi. Dinamik sekmeler, orta ayırıcı çizgi (`VS` rozeti), fotoğraf taşıyıcısı ve gölge stilleri standart React Native inline `style` nesnelerine taşınarak tam stabilite sağlandı.
+      - `app/_layout.tsx` kök Stack'ine `future-simulation` ve `transformation-card` modal olarak eklendi.
+      - Profil sekmesi (`app/(tabs)/profile/index.tsx`) Araçlar ve İlerleme menüsüne "🏆 Dönüşüm Kartı (Before / After)" kartı entegre edildi.
+      - TR, EN, DE, ES 4 dil çevirileri tamamlandı. `npx tsc --noEmit` ile 0 hata doğrulandı.
 0. **Çoklu Dil Desteği (i18n), Modern Uyarı Pencereleri & Kompakt Profil İstatistikleri (v1.0.6):**
    - **Çoklu Dil (i18n - TR, EN, DE, ES):** `expo-localization` entegre edildi. Telefon dili İngilizce ise İngilizce, değilse Türkçe açılır. `src/lib/i18n.ts` ve `src/stores/useLanguageStore.ts` oluşturuldu; Almanca (`de`) ve İspanyolca (`es`) eklendi. Profil sekmesinde istenildiği zaman değiştirilebilir, tercihler `AsyncStorage`'da kalıcıdır. Egzersiz kütüphanesi isimleri (`getExerciseDisplayName`) seçilen dile göre otomatik yerelleşir.
    - **Modern Uyarı & Onay Modalları (`ModernConfirmModal`, `SessionCompletedModal`):** Kötü görünen ham sistem `Alert.alert` uyarıları kaldırıldı; uygulamanın koyu karbon ve zümrüt yeşili temasına uyumlu modern onay diyalogları ve seans bitimi kutlama kartı oluşturuldu (`app/session.tsx`, `ExerciseCard.tsx`, `app/(tabs)/workout/history/[sessionId].tsx`, `app/weight-trend.tsx`).

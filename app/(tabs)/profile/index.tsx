@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, StatusModal } from '../../../src/components/ui';
+import { ToolsHubSheet } from '../../../src/components/profile/ToolsHubSheet';
 import { colors } from '../../../src/constants/theme';
 import { getLifetimeStats, type LifetimeStats } from '../../../src/db/profileStats';
 import { deleteUserAccountAndData } from '../../../src/lib/accountDeletion';
@@ -24,13 +26,7 @@ import { drainSyncQueue, pullUserDataFromSupabase } from '../../../src/db/syncEn
 import { formatDurationHuman } from '../../../src/lib/calculations';
 import { useSubscriptionStore } from '../../../src/stores/useSubscriptionStore';
 import { useLanguageStore } from '../../../src/stores/useLanguageStore';
-import { SUPPORTED_LANGUAGES, getExerciseDisplayName } from '../../../src/lib/i18n';
-
-function formatDate(timestampSeconds: number, lang: string = 'tr'): string {
-  const d = new Date(timestampSeconds * 1000);
-  const locale = lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : lang === 'es' ? 'es-ES' : 'en-US';
-  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
-}
+import { SUPPORTED_LANGUAGES } from '../../../src/lib/i18n';
 
 const EXPERIENCE_LABELS: Record<string, Record<string, string>> = {
   tr: {
@@ -110,6 +106,7 @@ export default function ProfileScreen() {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [toolsSheetVisible, setToolsSheetVisible] = useState(false);
 
   const loadData = useCallback(() => {
     const userId = session?.user.id;
@@ -172,6 +169,34 @@ export default function ProfileScreen() {
     setLogoutModalVisible(true);
   };
 
+  const handleSupportEmail = async () => {
+    const emailTo = 'boratzn94@gmail.com';
+    const subject = encodeURIComponent('PowerForm Destek ve Şikayet Talebi');
+    const body = encodeURIComponent(
+      `Merhaba,\n\nUygulama ile ilgili destek / şikayet talebim:\n\n[Lütfen mesajınızı buraya yazın]\n\nKullanıcı: ${session?.user?.email ?? 'Bilinmiyor'}\nSürüm: Powerform v1.1.0`
+    );
+    const mailtoUrl = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        await Clipboard.setStringAsync(emailTo);
+        Alert.alert(
+          t('email_copied_title'),
+          `${t('email_copied_desc')}\n${emailTo}`
+        );
+      }
+    } catch {
+      await Clipboard.setStringAsync(emailTo);
+      Alert.alert(
+        t('email_copied_title'),
+        `${t('email_copied_desc')}\n${emailTo}`
+      );
+    }
+  };
+
   const email = session?.user.email ?? 'Kullanıcı';
   const initial = email.charAt(0).toUpperCase();
 
@@ -214,13 +239,26 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Pressable
-          hitSlop={8}
-          onPress={() => router.push('/edit-profile')}
-          className="rounded-full bg-bg-surface px-3 py-1.5 border border-bg-elevated active:opacity-70"
-        >
-          <Text className="text-xs font-semibold text-accent">{t('edit')}</Text>
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            hitSlop={8}
+            onPress={() => setToolsSheetVisible(true)}
+            className="flex-row items-center gap-1 rounded-full bg-accent/15 px-3 py-1.5 border border-accent/40 active:opacity-70"
+          >
+            <Ionicons name="flash" size={13} color={colors.accent} />
+            <Text className="text-xs font-bold text-accent">
+              {language === 'tr' ? 'Araçlar' : language === 'de' ? 'Tools' : language === 'es' ? 'Herramientas' : 'Tools'}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            hitSlop={8}
+            onPress={() => router.push('/edit-profile')}
+            className="rounded-full bg-bg-surface px-3 py-1.5 border border-bg-elevated active:opacity-70"
+          >
+            <Text className="text-xs font-semibold text-text-primary">{t('edit')}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Üyelik & Plan Kartı */}
@@ -342,7 +380,7 @@ export default function ProfileScreen() {
               className="flex-row items-center justify-center gap-1 py-1"
             >
               <Text className="text-[11px] text-text-muted underline">
-                Google Play'de Aboneliği Yönet
+                {t('manage_subscription_play')}
               </Text>
             </Pressable>
           </View>
@@ -352,14 +390,14 @@ export default function ProfileScreen() {
           <View className="flex-row items-center justify-between pt-1 border-t border-white/5">
             <View className="flex-row items-center gap-1.5">
               <Ionicons name="checkmark-circle" size={15} color={colors.accent} />
-              <Text className="text-xs font-semibold text-accent">En avantajlı plandasınız</Text>
+              <Text className="text-xs font-semibold text-accent">{t('best_value_plan')}</Text>
             </View>
             <Pressable
               onPress={() => Linking.openURL('https://play.google.com/store/account/subscriptions')}
               className="py-1"
             >
               <Text className="text-[11px] text-text-muted underline">
-                Aboneliği Yönet (Google Play)
+                {t('manage_subscription_play')}
               </Text>
             </Pressable>
           </View>
@@ -409,134 +447,95 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Kişisel Rekorlar Vitrini (PRs Showcase) */}
+      {/* İlerleme ve Araçlar Merkezi (Hero Action Card) */}
       <View className="gap-xs">
         <View className="flex-row items-center justify-between">
           <Text className="text-xs uppercase font-bold tracking-wider text-text-muted">
-            {t('personal_records')}
+            {t('tools_and_progress')}
           </Text>
-          <Text className="text-[11px] text-text-muted">{t('highest_e1rm')}</Text>
+          <Pressable hitSlop={8} onPress={() => setToolsSheetVisible(true)}>
+            <Text className="text-xs font-semibold text-accent">
+              {language === 'tr' ? 'Tümünü Gör (8)' : language === 'de' ? 'Alle anzeigen (8)' : language === 'es' ? 'Ver todo (8)' : 'View All (8)'}
+            </Text>
+          </Pressable>
         </View>
 
-        {!stats || stats.topPRs.length === 0 ? (
-          <Card className="items-center py-md">
-            <Text className="text-xs text-text-muted">
-              {t('no_prs_yet')}
-            </Text>
+        <Pressable
+          onPress={() => setToolsSheetVisible(true)}
+          className="active:opacity-90"
+        >
+          <Card className="p-4 bg-[#151B23] border border-accent/35 gap-3.5">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3 flex-1 mr-2">
+                <View className="h-11 w-11 rounded-2xl bg-accent/20 border border-accent/40 items-center justify-center">
+                  <Ionicons name="flash" size={22} color={colors.accent} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-black text-text-primary">
+                    {t('tools_hub_title')}
+                  </Text>
+                  <Text className="text-[11px] text-text-muted mt-0.5" numberOfLines={1}>
+                    {t('tools_hub_subtitle')}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="h-7 px-2.5 rounded-full bg-accent items-center justify-center">
+                <Text className="text-[10px] font-black text-[#0B0F14]">8 ARAÇ</Text>
+              </View>
+            </View>
+
+            {/* Hızlı Önizleme Rozetleri */}
+            <View className="flex-row flex-wrap gap-1.5 pt-2 border-t border-white/5">
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">⚖️</Text>
+                <Text className="text-[10px] font-medium text-text-muted">Kilo</Text>
+              </View>
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">🏆</Text>
+                <Text className="text-[10px] font-medium text-text-muted">Rekorlar</Text>
+              </View>
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">📏</Text>
+                <Text className="text-[10px] font-medium text-text-muted">Ölçüler</Text>
+              </View>
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">🔮</Text>
+                <Text className="text-[10px] font-medium text-text-muted">90 Gün</Text>
+              </View>
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">🌙</Text>
+                <Text className="text-[10px] font-medium text-text-muted">Uyku</Text>
+              </View>
+              <View className="flex-row items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                <Text className="text-[10px]">📜</Text>
+                <Text className="text-[10px] font-medium text-text-muted">Geçmiş</Text>
+              </View>
+            </View>
+
+            {/* Buton Satırı */}
+            <View className="flex-row items-center justify-between pt-1">
+              <Text className="text-xs font-bold text-accent">
+                {t('open_tools_hub_btn')}
+              </Text>
+              <Ionicons name="chevron-up-circle" size={18} color={colors.accent} />
+            </View>
           </Card>
-        ) : (
-          <View className="gap-xs">
-            {stats.topPRs.map((pr) => {
-              const displayName = getExerciseDisplayName(pr, language);
-
-              return (
-                <Pressable
-                  key={pr.exerciseId}
-                  onPress={() => router.push(`/library/${pr.exerciseId}`)}
-                >
-                  {({ pressed }) => (
-                    <Card
-                      className={`flex-row items-center justify-between p-sm ${pressed ? 'opacity-80' : ''
-                        }`}
-                    >
-                      <View className="flex-1 mr-sm">
-                        <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
-                          {displayName}
-                        </Text>
-                        <Text className="text-[11px] text-text-muted mt-0.5">
-                          {pr.maxWeightKg} kg × {pr.reps} rep · {formatDate(pr.achievedAt, language)}
-                        </Text>
-                      </View>
-
-                      <View className="items-end">
-                        <View className="rounded bg-accent/20 px-2 py-0.5 border border-accent/40">
-                          <Text className="text-xs font-bold text-accent">
-                            {pr.bestE1RM} kg
-                          </Text>
-                        </View>
-                        <Text className="text-[9px] text-text-muted mt-0.5">e1RM</Text>
-                      </View>
-                    </Card>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+        </Pressable>
       </View>
 
-      {/* Hızlı Erişim ve Takip Menüsü */}
+      {/* Ayarlar ve Tercihler */}
       <View className="gap-xs">
         <Text className="text-xs uppercase font-bold tracking-wider text-text-muted">
-          {t('tools_and_progress')}
+          {t('settings_and_preferences')}
         </Text>
 
         <Card className="p-0 overflow-hidden divide-y divide-bg-elevated">
           <Pressable
-            onPress={() => router.push('/weight-trend')}
-            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
-          >
-            <View>
-              <Text className="text-sm font-semibold text-text-primary">
-                {t('weight_tracking_title')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('weight_tracking_desc')}
-              </Text>
-            </View>
-            <Text className="text-base text-accent font-bold">→</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push('/body-measurements')}
-            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
-          >
-            <View>
-              <Text className="text-sm font-semibold text-text-primary">
-                {t('body_measurements_title')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('body_measurements_desc')}
-              </Text>
-            </View>
-            <Text className="text-base text-accent font-bold">→</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push('/workout/history')}
-            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
-          >
-            <View>
-              <Text className="text-sm font-semibold text-text-primary">
-                {t('workout_history_title')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('workout_history_desc')}
-              </Text>
-            </View>
-            <Text className="text-base text-accent font-bold">→</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push('/workout/templates')}
-            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
-          >
-            <View>
-              <Text className="text-sm font-semibold text-text-primary">
-                {t('program_templates_title')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('program_templates_desc')}
-              </Text>
-            </View>
-            <Text className="text-base text-accent font-bold">→</Text>
-          </Pressable>
-
-          <Pressable
             onPress={() => router.push('/edit-profile')}
             className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
           >
-            <View>
+            <View className="flex-1 mr-2">
               <Text className="text-sm font-semibold text-text-primary">
                 {t('edit_profile_title')}
               </Text>
@@ -574,14 +573,10 @@ export default function ProfileScreen() {
           >
             <View className="flex-1 mr-sm">
               <Text className="text-sm font-semibold text-text-primary">
-                {syncing
-                  ? (language === 'tr' ? 'Buluttan Eşitleniyor...' : 'Syncing from Cloud...')
-                  : (language === 'tr' ? 'Bulut Verilerini Eşitle' : 'Sync Cloud Data')}
+                {syncing ? t('syncing_cloud_data') : t('sync_cloud_data')}
               </Text>
               <Text className="text-xs text-text-muted">
-                {language === 'tr'
-                  ? 'Antrenman geçmişi, kilo ve beslenme kayıtlarını buluttan geri yükler'
-                  : 'Restore workout history, weight, and nutrition logs from the cloud'}
+                {t('sync_cloud_desc')}
               </Text>
             </View>
             {syncing ? (
@@ -593,13 +588,30 @@ export default function ProfileScreen() {
         </Card>
       </View>
 
-      {/* Gizlilik & KVKK */}
+      {/* Gizlilik, Şikayet & Destek */}
       <View className="gap-xs">
         <Text className="text-xs uppercase font-bold tracking-wider text-text-muted">
-          {t('privacy_and_legal')}
+          {t('support_and_legal')}
         </Text>
 
         <Card className="p-0 overflow-hidden divide-y divide-bg-elevated">
+          <Pressable
+            onPress={handleSupportEmail}
+            className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
+          >
+            <View className="flex-1 mr-sm">
+              <Text className="text-sm font-semibold text-text-primary">
+                {t('complaint_support_title')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('complaint_support_desc')} boratzn94@gmail.com
+              </Text>
+            </View>
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-accent/15">
+              <Ionicons name="mail" size={16} color={colors.accent} />
+            </View>
+          </Pressable>
+
           <Pressable
             onPress={() => router.push('/legal')}
             className="flex-row items-center justify-between p-md active:bg-bg-elevated/40"
@@ -641,7 +653,7 @@ export default function ProfileScreen() {
       <Card className="gap-sm">
         <View className="flex-row items-center justify-between">
           <Text className="text-xs uppercase font-bold text-text-muted">{t('account')}</Text>
-          <Text className="text-xs text-text-muted">Powerform v1.0.7</Text>
+          <Text className="text-xs text-text-muted">Powerform v1.1.0</Text>
         </View>
 
         <Text className="text-sm text-text-primary">{email}</Text>
@@ -807,6 +819,12 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modern Araçlar ve İlerleme Bottom Sheet */}
+      <ToolsHubSheet
+        visible={toolsSheetVisible}
+        onClose={() => setToolsSheetVisible(false)}
+      />
     </ScrollView>
   );
 }

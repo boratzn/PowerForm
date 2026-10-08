@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 
 import { colors } from '../../src/constants/theme';
 import { useLanguageStore } from '../../src/stores/useLanguageStore';
@@ -7,9 +7,6 @@ import { useLanguageStore } from '../../src/stores/useLanguageStore';
 // Sekme yapısı §11 UX akışına birebir uyar: Bugün / Antrenman / Kütüphane / Beslenme / Koç / Profil
 export default function TabsLayout() {
   const t = useLanguageStore((s) => s.t);
-  const lang = useLanguageStore((s) => s.language);
-
-  const libraryTitle = lang === 'en' ? 'Library' : lang === 'de' ? 'Bibliothek' : lang === 'es' ? 'Biblioteca' : 'Kütüphane';
 
   return (
     <Tabs
@@ -38,9 +35,30 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="library"
         options={{
-          title: libraryTitle,
+          title: t('tab_library'),
           tabBarIcon: ({ color, size }) => <Ionicons name="library-outline" color={color} size={size} />,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            const state = navigation.getState();
+            const libraryRoute = state?.routes?.find((r: any) => r.name === 'library');
+            if (libraryRoute?.state?.key) {
+              navigation.dispatch({
+                type: 'RESET',
+                payload: {
+                  index: 0,
+                  routes: [{ name: 'index' }],
+                },
+                target: libraryRoute.state.key,
+              });
+            }
+            navigation.navigate('library', {
+              screen: 'index',
+            });
+            router.replace('/(tabs)/library');
+          },
+        })}
       />
       <Tabs.Screen
         name="nutrition"

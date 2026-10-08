@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card } from '../../src/components/ui';
 import { MuscleGroupBars, StatPill, WeightQuickEntry } from '../../src/components/today';
+import { ToolsHubSheet } from '../../src/components/profile/ToolsHubSheet';
 import { getRecentBodyWeights, getTodayBodyWeight, logBodyWeight, type BodyWeightLog } from '../../src/db/bodyWeight';
 import {
   getMuscleGroupBreakdown,
@@ -16,6 +17,7 @@ import {
   type WeeklyHighlights,
 } from '../../src/db/queries';
 import { getDailyNutritionReport, type DailyNutritionReport } from '../../src/db/nutrition';
+import { getTodaySleepRecord, formatSleepDuration, type SleepLog } from '../../src/db/sleepLogs';
 import { dateKey, formatDurationHuman } from '../../src/lib/calculations';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 import { useSessionStore } from '../../src/stores/useSessionStore';
@@ -87,10 +89,15 @@ export default function TodayScreen() {
   const [todayWeight, setTodayWeight] = useState<BodyWeightLog | undefined>(undefined);
   const [previousWeight, setPreviousWeight] = useState<BodyWeightLog | undefined>(undefined);
   const [nutritionReport, setNutritionReport] = useState<DailyNutritionReport | null>(null);
+  const [todaySleep, setTodaySleep] = useState<SleepLog | undefined>(undefined);
+  const [toolsSheetVisible, setToolsSheetVisible] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     Promise.all([
       getTodaySummary(userId),
       getWeeklyHighlights(userId),
@@ -98,14 +105,16 @@ export default function TodayScreen() {
       getRecentBodyWeights(userId, 2),
       getTodayBodyWeight(userId),
       getDailyNutritionReport(userId),
+      getTodaySleepRecord(userId),
     ])
-      .then(([s, weekly, muscles, recentWeights, today, nutrition]) => {
+      .then(([s, weekly, muscles, recentWeights, today, nutrition, sleep]) => {
         setSummary(s);
         setHighlights(weekly);
         setMuscleBreakdown(muscles);
         setTodayWeight(today);
         setPreviousWeight(recentWeights.find((w) => w.clientUuid !== today?.clientUuid));
         setNutritionReport(nutrition);
+        setTodaySleep(sleep);
       })
       .finally(() => setLoading(false));
   }, [userId]);
@@ -133,11 +142,24 @@ export default function TodayScreen() {
   const hasActiveSession = !!activeSessionClientUuid;
 
   return (
-    <ScrollView
+    <>
+      <ScrollView
       className="flex-1 bg-bg-primary px-lg"
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32, gap: 16 }}
     >
-      <Text className="text-2xl font-semibold text-text-primary">{t('today_title')}</Text>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-2xl font-semibold text-text-primary">{t('today_title')}</Text>
+        <Pressable
+          hitSlop={8}
+          onPress={() => setToolsSheetVisible(true)}
+          className="flex-row items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1.5 border border-accent/40 active:opacity-70"
+        >
+          <Ionicons name="flash" size={13} color={colors.accent} />
+          <Text className="text-xs font-bold text-accent">
+            {language === 'tr' ? 'Araçlar' : language === 'de' ? 'Tools' : language === 'es' ? 'Herramientas' : 'Tools'}
+          </Text>
+        </Pressable>
+      </View>
 
       {/* Hero: aktif seans devam ediyorsa devam et, yoksa yeni seans başlat */}
       <Card className="gap-md bg-bg-elevated">
@@ -234,6 +256,62 @@ export default function TodayScreen() {
         <WeightQuickEntry todayEntry={todayWeight} previousEntry={previousWeight} onSave={handleSaveWeight} />
       </Card>
 
+      {/* Uyku & Toparlanma Kartı */}
+      <Pressable onPress={() => router.push('/sleep-tracker')} className="active:opacity-85">
+        <Card className="gap-sm">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-xs">
+              <Ionicons name="moon" size={16} color="#818CF8" />
+              <Text className="text-xs uppercase font-bold text-text-muted">{t('sleep_recovery_title')}</Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <Text className="text-xs font-semibold text-[#818CF8]">{t('details_and_chart')}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#818CF8" />
+            </View>
+          </View>
+
+          {todaySleep ? (
+            <View className="flex-row items-center justify-between">
+              <View>
+                <Text className="text-2xl font-bold text-text-primary">
+                  {formatSleepDuration(todaySleep.durationMinutes, language)}
+                </Text>
+                <Text className="text-xs text-text-muted mt-0.5">
+                  {todaySleep.bedtime} → {todaySleep.wakeTime} ·{' '}
+                  {(todaySleep.quality ?? 3) >= 4
+                    ? `😊 ${t('sleep_rested')}`
+                    : (todaySleep.quality ?? 3) <= 2
+                    ? `🥱 ${t('sleep_tired')}`
+                    : `😐 ${t('sleep_normal')}`}
+                </Text>
+              </View>
+
+              <View className="items-end">
+                <View className="rounded-full bg-[#818CF8]/15 px-3 py-1 border border-[#818CF8]/30">
+                  <Text className="text-xs font-bold text-[#818CF8]">
+                    {todaySleep.durationMinutes >= 420 && todaySleep.durationMinutes <= 540
+                      ? `✓ ${t('on_target_badge')} (7-9h)`
+                      : `${(todaySleep.durationMinutes / 60).toFixed(1)} h`}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View className="flex-row items-center justify-between py-1">
+              <View className="flex-1 mr-2">
+                <Text className="text-sm font-semibold text-text-primary">{t('log_today_sleep_title')}</Text>
+                <Text className="text-xs text-text-muted mt-0.5">
+                  {t('log_today_sleep_desc')}
+                </Text>
+              </View>
+              <View className="rounded-lg bg-bg-elevated px-3 py-1.5 border border-white/5">
+                <Text className="text-xs font-bold text-[#818CF8]">{t('enter_sleep_btn')}</Text>
+              </View>
+            </View>
+          )}
+        </Card>
+      </Pressable>
+
       <Pressable onPress={handleGoToNutrition} className="active:opacity-85">
         <Card className="gap-sm">
           <View className="flex-row items-center justify-between">
@@ -287,5 +365,10 @@ export default function TodayScreen() {
         </Card>
       </Pressable>
     </ScrollView>
+      <ToolsHubSheet
+        visible={toolsSheetVisible}
+        onClose={() => setToolsSheetVisible(false)}
+      />
+    </>
   );
 }

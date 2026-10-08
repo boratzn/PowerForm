@@ -13,7 +13,7 @@ export default function WorkoutLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="templates/index" options={{ title: 'Hazır Programlar' }} />
+      <Stack.Screen name="templates/index" options={{ title: 'Programlar & Şablonlar' }} />
       <Stack.Screen name="templates/[templateId]" options={{ title: 'Program Detayı' }} />
       <Stack.Screen name="editor" options={{ title: 'Program Düzenleyici' }} />
       <Stack.Screen name="history/index" options={{ title: 'Antrenman Geçmişi' }} />

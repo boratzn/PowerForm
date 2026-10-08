@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -10,6 +11,7 @@ import { useProgramStore } from '../../../src/stores/useProgramStore';
 import { useSessionStore } from '../../../src/stores/useSessionStore';
 import { useLanguageStore } from '../../../src/stores/useLanguageStore';
 import { getExerciseDisplayName } from '../../../src/lib/i18n';
+import { BannerAdView } from '../../../src/components/ads';
 
 const GOAL_LABELS: Record<string, { label: string; color: string }> = {
   hypertrophy: { label: 'Hipertrofi (Kas)', color: '#38BDF8' },
@@ -82,14 +84,14 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-primary px-lg"
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 32,
-        gap: 20,
-      }}
-    >
+    <View className="flex-1 bg-bg-primary" style={{ paddingTop: insets.top + 16 }}>
+      <ScrollView
+        className="flex-1 px-lg"
+        contentContainerStyle={{
+          paddingBottom: 24,
+          gap: 20,
+        }}
+      >
       {/* Üst Başlık */}
       <View className="flex-row items-center justify-between">
         <View>
@@ -233,9 +235,15 @@ export default function WorkoutScreen() {
                       : null;
 
                   return (
-                    <View
+                    <Pressable
                       key={item.clientUuid}
-                      className="flex-row items-center gap-sm border-b border-bg-elevated/40 py-xs"
+                      onPress={() =>
+                        router.push({
+                          pathname: `/library/${item.exerciseId}`,
+                          params: { from: 'workout' },
+                        })
+                      }
+                      className="flex-row items-center gap-sm border-b border-bg-elevated/40 py-xs active:opacity-70"
                     >
                       <View className="h-10 w-10 overflow-hidden rounded bg-bg-elevated">
                         <Image
@@ -254,13 +262,14 @@ export default function WorkoutScreen() {
                           >
                             {displayName}
                           </Text>
+                          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
                         </View>
                         <Text className="text-[10px] text-text-muted">
                           {item.targetSets} {t('set').toLowerCase()} {repText ? `× ${repText}` : ''}{' '}
                           {item.targetRir !== null ? `· RIR ${item.targetRir}` : ''}
                         </Text>
                       </View>
-                    </View>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -288,7 +297,7 @@ export default function WorkoutScreen() {
               }
             />
             <Button
-              label={t('templates_title')}
+              label={language === 'tr' ? 'Program Değiştir' : t('templates_title')}
               variant="secondary"
               className="flex-1"
               onPress={() => router.push('/workout/templates')}
@@ -355,8 +364,8 @@ export default function WorkoutScreen() {
                     </Text>
                   </View>
                   <Button
-                    label={t('apply')}
-                    variant="secondary"
+                    label={language === 'tr' ? '⚡ Aktif Yap' : t('apply')}
+                    variant="primary"
                     className="min-h-[36px] px-sm py-1"
                     onPress={(e) => {
                       e?.stopPropagation?.();
@@ -401,5 +410,8 @@ export default function WorkoutScreen() {
         </Pressable>
       </View>
     </ScrollView>
-  );
+
+    <BannerAdView />
+  </View>
+);
 }

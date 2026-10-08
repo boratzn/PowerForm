@@ -11,6 +11,7 @@ type SessionCompletedModalProps = {
   durationSeconds: number;
   totalVolumeKg: number;
   prCount: number;
+  onSaveAsProgram?: () => void;
   onClose: () => void;
 };
 
@@ -19,8 +20,10 @@ export function SessionCompletedModal({
   durationSeconds,
   totalVolumeKg,
   prCount,
+  onSaveAsProgram,
   onClose,
 }: SessionCompletedModalProps) {
+  const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
 
   return (
@@ -76,6 +79,19 @@ export function SessionCompletedModal({
               </Text>
             </View>
           </View>
+
+          {/* Program Olarak Kaydet Butonu */}
+          {onSaveAsProgram && (
+            <Pressable
+              onPress={onSaveAsProgram}
+              className="h-11 flex-row items-center justify-center gap-2 rounded-xl bg-bg-elevated border border-accent/40 mb-3 active:opacity-80"
+            >
+              <Ionicons name="bookmark-outline" size={16} color={colors.accent} />
+              <Text className="text-xs font-bold text-accent">
+                {t('save_as_program_btn')}
+              </Text>
+            </Pressable>
+          )}
 
           {/* Tamamla Butonu */}
           <Pressable

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -16,13 +17,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../src/constants/theme';
 import { supabase } from '../../src/lib/supabase';
+import { useLanguageStore } from '../../src/stores/useLanguageStore';
+
+const REMEMBER_ME_KEY = 'powerform_remember_me';
+const REMEMBERED_EMAIL_KEY = 'powerform_remembered_email';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useLanguageStore((s) => s.t);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
@@ -33,6 +40,18 @@ export default function LoginScreen() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
+    // Hatırlanan e-postayı yükle
+    AsyncStorage.multiGet([REMEMBER_ME_KEY, REMEMBERED_EMAIL_KEY])
+      .then(([[, rem], [, savedEmail]]) => {
+        if (rem !== null) {
+          setRememberMe(rem === 'true');
+        }
+        if (savedEmail && rem !== 'false') {
+          setEmail(savedEmail);
+        }
+      })
+      .catch(() => {});
+
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
@@ -66,6 +85,19 @@ export default function LoginScreen() {
       } else {
         setError(err.message);
       }
+    } else {
+      // Başarılı girişte Beni Hatırla tercihini kaydet
+      if (rememberMe) {
+        AsyncStorage.multiSet([
+          [REMEMBER_ME_KEY, 'true'],
+          [REMEMBERED_EMAIL_KEY, email.trim()],
+        ]).catch(() => {});
+      } else {
+        AsyncStorage.multiSet([
+          [REMEMBER_ME_KEY, 'false'],
+          [REMEMBERED_EMAIL_KEY, ''],
+        ]).catch(() => {});
+      }
     }
   };
 
@@ -95,16 +127,16 @@ export default function LoginScreen() {
             POWER<Text className="text-accent">FORM</Text>
           </Text>
           <Text className="text-xs text-text-muted mt-1 font-medium text-center">
-            Performansını ve formunu zirveye taşı
+            {t('brand_slogan')}
           </Text>
         </View>
 
         {/* GİRİŞ FORMU KARTI */}
         <View className="rounded-3xl bg-bg-surface border border-white/10 p-6 shadow-xl shadow-black/40 gap-4">
           <View>
-            <Text className="text-xl font-extrabold text-text-primary">Giriş Yap</Text>
+            <Text className="text-xl font-extrabold text-text-primary">{t('login_title')}</Text>
             <Text className="text-xs text-text-muted mt-0.5">
-              Antrenman ve gelişim yolculuğuna devam et
+              {t('login_subtitle')}
             </Text>
           </View>
 
@@ -118,7 +150,7 @@ export default function LoginScreen() {
 
           {/* E-POSTA ALANI */}
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold text-text-muted">E-posta</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('email_label')}</Text>
             <View
               className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                 isEmailFocused ? 'border-accent bg-bg-elevated/90' : 'border-white/10'
@@ -147,7 +179,7 @@ export default function LoginScreen() {
 
           {/* ŞİFRE ALANI */}
           <View className="gap-1.5">
-            <Text className="text-xs font-semibold text-text-muted">Şifre</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('password_label')}</Text>
             <View
               className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                 isPasswordFocused ? 'border-accent bg-bg-elevated/90' : 'border-white/10'
@@ -189,8 +221,29 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* ŞİFREMİ UNUTTUM */}
-          <View className="items-end">
+          {/* BENİ HATIRLA & ŞİFREMİ UNUTTUM */}
+          <View className="flex-row items-center justify-between pt-0.5">
+            <Pressable
+              onPress={() => setRememberMe(!rememberMe)}
+              hitSlop={8}
+              className="flex-row items-center gap-2 active:opacity-75"
+            >
+              <View
+                className={`h-5 w-5 items-center justify-center rounded-md border ${
+                  rememberMe
+                    ? 'bg-accent border-accent'
+                    : 'bg-bg-elevated border-white/20'
+                }`}
+              >
+                {rememberMe && (
+                  <Ionicons name="checkmark" size={13} color="#0B0F14" />
+                )}
+              </View>
+              <Text className="text-xs font-semibold text-text-primary">
+                {t('remember_me')}
+              </Text>
+            </Pressable>
+
             <Pressable
               hitSlop={8}
               onPress={() => router.push('/forgot-password')}
@@ -198,7 +251,7 @@ export default function LoginScreen() {
               className="py-0.5"
             >
               <Text className="text-xs font-semibold text-[#38BDF8]">
-                Şifremi unuttum?
+                {t('forgot_password_link')}
               </Text>
             </Pressable>
           </View>
@@ -214,21 +267,21 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator size="small" color="#0B0F14" />
             ) : (
-              <Text className="text-sm font-bold text-[#0B0F14]">Giriş Yap ➔</Text>
+              <Text className="text-sm font-bold text-[#0B0F14]">{t('login_title')} ➔</Text>
             )}
           </Pressable>
         </View>
 
         {/* KAYIT OL YÖNLENDİRMESİ */}
         <View className="flex-row items-center justify-center gap-1.5 mt-8">
-          <Text className="text-xs text-text-muted">Hesabın yok mu?</Text>
+          <Text className="text-xs text-text-muted">{t('dont_have_account')}</Text>
           <Pressable
             hitSlop={8}
             onPress={() => router.push('/register')}
             disabled={loading}
             className="py-1 px-1.5"
           >
-            <Text className="text-xs font-bold text-accent">Kayıt Ol</Text>
+            <Text className="text-xs font-bold text-accent">{t('sign_up_link')}</Text>
           </Pressable>
         </View>
       </ScrollView>

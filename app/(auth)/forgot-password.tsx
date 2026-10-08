@@ -16,10 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../src/constants/theme';
 import { supabase } from '../../src/lib/supabase';
+import { useLanguageStore } from '../../src/stores/useLanguageStore';
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useLanguageStore((s) => s.t);
 
   const [email, setEmail] = useState('');
   const [isEmailFocused, setIsEmailFocused] = useState(false);
@@ -94,10 +96,10 @@ export default function ForgotPasswordScreen() {
             <Ionicons name="key-outline" size={30} color="#38BDF8" />
           </View>
           <Text className="text-2xl font-black tracking-widest text-text-primary">
-            ŞİFRE<Text className="text-[#38BDF8]">YENİLE</Text>
+            POWER<Text className="text-accent">FORM</Text>
           </Text>
           <Text className="text-xs text-text-muted mt-1 font-medium text-center">
-            Hesabına yeniden erişim sağla
+            {t('reset_password_tagline')}
           </Text>
         </View>
 
@@ -108,26 +110,26 @@ export default function ForgotPasswordScreen() {
             </View>
 
             <Text className="text-xl font-extrabold text-text-primary text-center">
-              E-posta Gönderildi! ✨
+              {t('reset_link_sent_title')}
             </Text>
 
             <Text className="text-xs text-text-muted text-center mt-2 leading-relaxed">
-              <Text className="font-semibold text-text-primary">{email}</Text> adresine şifre sıfırlama bağlantısı iletildi. Lütfen gelen kutunuzu (ve spam klasörünü) kontrol edin.
+              <Text className="font-semibold text-text-primary">{email}</Text> {t('reset_link_sent_desc')}
             </Text>
 
             <Pressable
               onPress={() => router.replace('/login')}
               className="w-full min-h-[48px] items-center justify-center rounded-xl bg-accent mt-6 active:opacity-85 shadow-lg shadow-accent/25"
             >
-              <Text className="text-sm font-bold text-[#0B0F14]">Giriş Ekranına Dön</Text>
+              <Text className="text-sm font-bold text-[#0B0F14]">{t('back_to_login')}</Text>
             </Pressable>
           </View>
         ) : (
           <View className="rounded-3xl bg-bg-surface border border-white/10 p-6 shadow-xl shadow-black/40 gap-4">
             <View>
-              <Text className="text-xl font-extrabold text-text-primary">Şifremi Unuttum</Text>
+              <Text className="text-xl font-extrabold text-text-primary">{t('forgot_password_title')}</Text>
               <Text className="text-xs text-text-muted mt-0.5 leading-relaxed">
-                Hesabınıza bağlı e-posta adresinizi girin, sıfırlama bağlantısını iletelim.
+                {t('forgot_password_desc')}
               </Text>
             </View>
 
@@ -141,7 +143,7 @@ export default function ForgotPasswordScreen() {
 
             {/* E-POSTA ALANI */}
             <View className="gap-1.5">
-              <Text className="text-xs font-semibold text-text-muted">E-posta</Text>
+              <Text className="text-xs font-semibold text-text-muted">{t('email_label')}</Text>
               <View
                 className={`flex-row items-center rounded-xl bg-bg-elevated px-3.5 border transition-all ${
                   isEmailFocused ? 'border-[#38BDF8] bg-bg-elevated/90' : 'border-white/10'
@@ -180,7 +182,7 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator size="small" color="#0B0F14" />
               ) : (
-                <Text className="text-sm font-bold text-[#0B0F14]">Sıfırlama Bağlantısı Gönder ➔</Text>
+                <Text className="text-sm font-bold text-[#0B0F14]">{t('send_reset_link')}</Text>
               )}
             </Pressable>
 
@@ -190,7 +192,7 @@ export default function ForgotPasswordScreen() {
               disabled={loading}
               className="items-center py-2 active:opacity-70 mt-1"
             >
-              <Text className="text-xs font-semibold text-text-muted">Giriş Yap'a Dön</Text>
+              <Text className="text-xs font-semibold text-text-muted">{t('back_to_login')}</Text>
             </Pressable>
           </View>
         )}

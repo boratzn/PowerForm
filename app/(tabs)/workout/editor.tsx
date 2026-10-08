@@ -23,7 +23,9 @@ import { colors } from '../../../src/constants/theme';
 import { getProgramById, saveCustomProgram } from '../../../src/db/programs';
 import type { LocalExercise } from '../../../src/db/queries';
 import { generateUuid } from '../../../src/lib/uuid';
+import { getGoalDisplayName } from '../../../src/lib/i18n';
 import { useAuthStore } from '../../../src/stores/useAuthStore';
+import { useLanguageStore } from '../../../src/stores/useLanguageStore';
 import { useProgramStore } from '../../../src/stores/useProgramStore';
 
 type GoalType = 'hypertrophy' | 'strength' | 'fat_loss' | 'recomp' | 'general_health';
@@ -66,6 +68,8 @@ export default function ProgramEditorScreen() {
   const router = useRouter();
   const { programId, cloneFromId } = useLocalSearchParams<{ programId?: string; cloneFromId?: string }>();
   const userId = useAuthStore((s) => s.session?.user.id);
+  const t = useLanguageStore((s) => s.t);
+  const lang = useLanguageStore((s) => s.language);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -397,7 +401,7 @@ export default function ProgramEditorScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg-primary">
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text className="mt-md text-sm text-text-muted">Program yükleniyor...</Text>
+        <Text className="mt-md text-sm text-text-muted">{t('loading')}</Text>
       </View>
     );
   }
@@ -420,19 +424,19 @@ export default function ProgramEditorScreen() {
       >
         {/* Temel Bilgiler Kartı */}
         <Card className="gap-md">
-          <Text className="text-base font-bold text-text-primary">Program Bilgileri</Text>
+          <Text className="text-base font-bold text-text-primary">{t('program_info')}</Text>
 
           <View className="gap-xs">
-            <Text className="text-xs font-semibold text-text-muted">Program Adı *</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('program_name_label')}</Text>
             <Input
-              placeholder="Örn: 4 Günlük Hipertrofi Programım"
+              placeholder={t('program_name_label').replace('*', '').trim()}
               value={name}
               onChangeText={setName}
             />
           </View>
 
           <View className="gap-xs">
-            <Text className="text-xs font-semibold text-text-muted">Hedef</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('main_goal_section')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {GOALS.map((g) => {
                 const selected = goal === g.key;
@@ -449,7 +453,7 @@ export default function ProgramEditorScreen() {
                         selected ? 'text-accent' : 'text-text-muted'
                       }`}
                     >
-                      {g.label}
+                      {getGoalDisplayName(g.key, lang)}
                     </Text>
                   </Pressable>
                 );
@@ -459,7 +463,7 @@ export default function ProgramEditorScreen() {
 
           <View className="flex-row gap-md">
             <View className="flex-1 gap-xs">
-              <Text className="text-xs font-semibold text-text-muted">Süre (Hafta)</Text>
+              <Text className="text-xs font-semibold text-text-muted">{t('program_duration_weeks')}</Text>
               <Input
                 placeholder="8"
                 keyboardType="numeric"
@@ -468,17 +472,17 @@ export default function ProgramEditorScreen() {
               />
             </View>
             <View className="flex-1 gap-xs">
-              <Text className="text-xs font-semibold text-text-muted">Haftalık Gün</Text>
+              <Text className="text-xs font-semibold text-text-muted">{t('weekly_days_label')}</Text>
               <View className="min-h-[48px] justify-center rounded-card border border-bg-elevated bg-bg-card px-md">
-                <Text className="text-base font-semibold text-text-primary">{days.length} Gün</Text>
+                <Text className="text-base font-semibold text-text-primary">{days.length} {t('days')}</Text>
               </View>
             </View>
           </View>
 
           <View className="gap-xs">
-            <Text className="text-xs font-semibold text-text-muted">Açıklama / Notlar</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('description_notes_label')}</Text>
             <Input
-              placeholder="İsteğe bağlı program açıklaması..."
+              placeholder="..."
               value={description}
               onChangeText={setDescription}
               multiline
@@ -487,7 +491,7 @@ export default function ProgramEditorScreen() {
 
           <View className="flex-row items-center justify-between border-t border-bg-elevated pt-sm">
             <Text className="text-sm font-medium text-text-primary">
-              Kaydedince Aktif Program Yap
+              {t('set_active_on_save')}
             </Text>
             <Switch
               value={setActiveImmediately}
@@ -502,10 +506,10 @@ export default function ProgramEditorScreen() {
         <View className="gap-xs">
           <View className="flex-row items-center justify-between">
             <Text className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Program Günleri ({days.length})
+              {t('program_days_title')} ({days.length})
             </Text>
             <Pressable onPress={handleAddDay} className="flex-row items-center gap-1 active:opacity-70">
-              <Text className="text-xs font-bold text-accent">+ Gün Ekle</Text>
+              <Text className="text-xs font-bold text-accent">{t('add_day_btn')}</Text>
             </Pressable>
           </View>
 
@@ -527,7 +531,7 @@ export default function ProgramEditorScreen() {
                       isSelected ? 'text-accent' : 'text-text-muted'
                     }`}
                   >
-                    {idx + 1}. Gün
+                    {idx + 1}. {t('day_label')}
                   </Text>
                   <Text
                     className={`mt-0.5 text-sm font-medium ${
@@ -553,29 +557,29 @@ export default function ProgramEditorScreen() {
             <Card className="gap-sm">
               <View className="flex-row items-center justify-between">
                 <Text className="text-base font-bold text-text-primary">
-                  {selectedDayIdx + 1}. Gün Ayarları
+                  {selectedDayIdx + 1}. {t('day_label')}
                 </Text>
                 {days.length > 1 && (
                   <Pressable onPress={() => handleRemoveDay(selectedDayIdx)}>
-                    <Text className="text-xs font-semibold text-danger">Günü Sil</Text>
+                    <Text className="text-xs font-semibold text-danger">{t('delete_day_btn')}</Text>
                   </Pressable>
                 )}
               </View>
 
               <View className="flex-row gap-sm">
                 <View className="flex-1 gap-xs">
-                  <Text className="text-xs text-text-muted">Gün İsmi</Text>
+                  <Text className="text-xs text-text-muted">{t('day_name_label')}</Text>
                   <Input
-                    placeholder="Örn: İtiş (Göğüs-Omuz)"
+                    placeholder="..."
                     value={activeDay.name}
                     onFocus={scrollToDaySettings}
                     onChangeText={(val) => updateActiveDayField('name', val)}
                   />
                 </View>
                 <View className="flex-1 gap-xs">
-                  <Text className="text-xs text-text-muted">Odak Kas Grubu</Text>
+                  <Text className="text-xs text-text-muted">{t('muscles_worked')}</Text>
                   <Input
-                    placeholder="Örn: Göğüs, Triceps"
+                    placeholder="..."
                     value={activeDay.focus}
                     onFocus={scrollToDaySettings}
                     onChangeText={(val) => updateActiveDayField('focus', val)}
@@ -593,21 +597,21 @@ export default function ProgramEditorScreen() {
             >
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm font-bold text-text-primary">
-                  Egzersizler ({activeDay.exercises.length})
+                  {t('tab_library')} ({activeDay.exercises.length})
                 </Text>
                 <Pressable
                   onPress={() => setPickerVisible(true)}
                   className="rounded bg-accent/20 px-sm py-xs active:opacity-70"
                 >
-                  <Text className="text-xs font-bold text-accent">+ Egzersiz Ekle</Text>
+                  <Text className="text-xs font-bold text-accent">{t('add_exercise')}</Text>
                 </Pressable>
               </View>
 
               {activeDay.exercises.length === 0 ? (
                 <Card className="items-center justify-center py-lg">
-                  <Text className="text-sm text-text-muted">Bu güne henüz egzersiz eklenmedi.</Text>
+                  <Text className="text-sm text-text-muted">{t('no_exercises_day')}</Text>
                   <Button
-                    label="Egzersiz Ekle"
+                    label={t('add_exercise')}
                     variant="secondary"
                     className="mt-md"
                     onPress={() => setPickerVisible(true)}
@@ -644,7 +648,7 @@ export default function ProgramEditorScreen() {
                           onPress={() => handleRemoveExercise(item.tempId)}
                           className="p-xs"
                         >
-                          <Text className="text-xs font-bold text-danger">Kaldır</Text>
+                          <Text className="text-xs font-bold text-danger">{t('remove_btn')}</Text>
                         </Pressable>
                       </View>
 
@@ -784,7 +788,7 @@ export default function ProgramEditorScreen() {
         }}
       >
         <Button
-          label={saving ? 'Kaydediliyor...' : 'Programı Kaydet'}
+          label={saving ? t('saving') : t('save')}
           variant="primary"
           onPress={handleSave}
           disabled={saving}

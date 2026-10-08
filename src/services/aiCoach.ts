@@ -129,14 +129,16 @@ Analiz Kuralları:
 3. Ağırlığı veya tekrarı takılan/sabit kalan hareketleri ("plateau") ve gerileyenleri ("regressing") tek tek ele al:
    - Neden takılmış olabilir? (Toparlanma, yorgunluk, form, biomekanik)
    - Çözüm önerisi: Tekrar aralığını değiştirme (örn. 6-8 yerine 8-10 veya tersi), alternatif varyasyona geçiş (örn. Incline Dumbbell Press yerine Smith Machine Incline veya Cable Press), tempo/duraklatmalı tekrar veya deload.
-4. Kullanıcının check-in yanıtlarını (uyku/toparlanma puanı, eklem ağrısı ve beslenme sadakati) doğrudan analize dahil et. Eğer eklem ağrısı varsa o eklemi zorlayan hareket için uyarı ve alternatif ver.
-5. Vücut ağırlığı ve beslenme (protein/kalori) trendini hedefe göre değerlendir.
-6. Yanıtını aşağıdaki Markdown başlıklarıyla düzenli ve görsel olarak zengin (emoji ve listelerle) sun:
+4. UYKU & TOPARLANMA ANALİZİ: Kullanıcının ortalama uyku süresini (haftalık ortalama saat), yatış-kalkış saatlerini, tutarlılık puanını ve check-in uyku puanını derinlemesine değerlendir. Eğer uyku 7 saatin altındaysa veya tutarsızsa, merkezi sinir sistemi (CNS) toparlanması ve kas hipertrofisi üzerindeki etkisini açıkla ve optimize etmek için somut tavsiyeler ver.
+5. Kullanıcının check-in yanıtlarını (eklem ağrısı, yorgunluk ve beslenme sadakati) doğrudan analize dahil et. Eğer eklem ağrısı varsa o eklemi zorlayan hareket için uyarı ve alternatif ver.
+6. Vücut ağırlığı ve beslenme (protein/kalori) trendini hedefe göre değerlendir.
+7. Yanıtını aşağıdaki Markdown başlıklarıyla düzenli ve görsel olarak zengin (emoji ve listelerle) sun:
    - 🏆 **Haftalık Özet & Güçlenen Hareketler**
    - 🔍 **Plato Analizi & Egzersiz Değişiklik Reçetesi**
+   - 💤 **Uyku Takibi & Merkezi Sinir Sistemi (CNS) Toparlanması**
    - ⚖️ **Kilo Trendi & Beslenme Uyumu**
    - 🎯 **Gelecek Hafta İçin Eylem Planı (3 Madde)**
-7. ÖNEMLİ EYLEM: Eğer kullanıcının aktif programında değişmesini önerdiğin bir egzersiz varsa, raporunun EN SONUNA kullanıcı tek tıkla onaylasın diye TAM OLARAK şu formatta bir JSON bloğu ekle:
+8. ÖNEMLİ EYLEM: Eğer kullanıcının aktif programında değişmesini önerdiğin bir egzersiz varsa, raporunun EN SONUNA kullanıcı tek tıkla onaylasın diye TAM OLARAK şu formatta bir JSON bloğu ekle:
 \`\`\`json:workout_action
 {
   "type": "replace_exercise",
@@ -215,7 +217,7 @@ Gereksiz uzunluktan kaçın, maddeler ve net talimatlarla konuş.
 \`\`\``;
 
   const contextSnippet = weeklyContext
-    ? `\nKullanıcının Mevcut Durumu:\n- Bu hafta ${weeklyContext.workoutSummary.totalSessions} antrenman yaptı (${weeklyContext.workoutSummary.totalVolumeKg} kg hacim).\n- Takıldığı hareketler: ${weeklyContext.workoutSummary.plateauExercises.map((e) => e.nameTr || e.name).join(', ') || 'Yok'}.\n- Gelişen hareketler: ${weeklyContext.workoutSummary.progressingExercises.map((e) => `${e.nameTr || e.name} (+${e.deltaWeightKg}kg)`).join(', ') || 'Yok'}.\n- Vücut Ağırlığı: ${weeklyContext.weightSummary.currentWeekAvgKg ?? 'Bilinmiyor'} kg (Haftalık değişim: ${weeklyContext.weightSummary.weeklyChangeKg ?? '0'} kg).`
+    ? `\nKullanıcının Mevcut Durumu:\n- Bu hafta ${weeklyContext.workoutSummary.totalSessions} antrenman yaptı (${weeklyContext.workoutSummary.totalVolumeKg} kg hacim).\n- Takıldığı hareketler: ${weeklyContext.workoutSummary.plateauExercises.map((e) => e.nameTr || e.name).join(', ') || 'Yok'}.\n- Gelişen hareketler: ${weeklyContext.workoutSummary.progressingExercises.map((e) => `${e.nameTr || e.name} (+${e.deltaWeightKg}kg)`).join(', ') || 'Yok'}.\n- Vücut Ağırlığı: ${weeklyContext.weightSummary.currentWeekAvgKg ?? 'Bilinmiyor'} kg (Haftalık değişim: ${weeklyContext.weightSummary.weeklyChangeKg ?? '0'} kg).\n- Uyku & Toparlanma: Haftalık ortalama ${weeklyContext.sleepSummary.avgDurationHours} saat uyudu (Yatış: ${weeklyContext.sleepSummary.avgBedtime}, Kalkış: ${weeklyContext.sleepSummary.avgWakeTime}, Tutarlılık: %${weeklyContext.sleepSummary.consistencyScore}, Durum: ${weeklyContext.sleepSummary.recoveryStatus}).`
     : '';
 
   const messagesPayload = [

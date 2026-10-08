@@ -299,3 +299,21 @@ export const aiMessages = sqliteTable('ai_messages', {
     .default(sql`(unixepoch())`),
 });
 
+// Uyku Takibi (Sleep Logs)
+export const sleepLogs = sqliteTable('sleep_logs', {
+  clientUuid: text('client_uuid').primaryKey(),
+  userId: text('user_id').notNull(),
+  date: text('date').notNull(), // 'YYYY-MM-DD'
+  bedtime: text('bedtime').notNull(), // '23:30'
+  wakeTime: text('wake_time').notNull(), // '07:30'
+  durationMinutes: integer('duration_minutes').notNull(),
+  quality: integer('quality').default(3), // 1-5
+  notes: text('notes'),
+  createdAt: integer('created_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+

@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Card } from '../../../src/components/ui';
 import { colors } from '../../../src/constants/theme';
@@ -29,8 +30,29 @@ function formatShortDate(timestampSeconds: number): string {
 }
 
 export default function ExerciseDetailScreen() {
-  const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
+  const { exerciseId, from } = useLocalSearchParams<{ exerciseId: string; from?: string }>();
   const router = useRouter();
+
+  const handleGoBack = useCallback(() => {
+    if (from === 'profile') {
+      router.navigate('/(tabs)/profile');
+    } else if (from === 'workout') {
+      router.navigate('/(tabs)/workout');
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/library');
+    }
+  }, [from, router]);
+
+  useEffect(() => {
+    if (!from) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleGoBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [from, handleGoBack]);
 
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
@@ -102,7 +124,16 @@ export default function ExerciseDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: displayName }} />
+      <Stack.Screen
+        options={{
+          title: displayName,
+          headerLeft: from ? () => (
+            <Pressable onPress={handleGoBack} hitSlop={12} className="mr-3 p-1 active:opacity-70">
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </Pressable>
+          ) : undefined,
+        }}
+      />
       <ScrollView className="flex-1 bg-bg-primary" contentContainerStyle={{ paddingBottom: 48 }}>
         <View className="h-64 w-full items-center justify-center bg-bg-elevated">
           {(exercise.gifUrl || exercise.imageUrl) && (
@@ -298,7 +329,7 @@ export default function ExerciseDetailScreen() {
           {exercise.commonMistakesTr && exercise.commonMistakesTr.length > 0 && (
             <View className="gap-sm">
               <Text className="text-xs uppercase text-text-muted font-bold tracking-wider">
-                {language === 'tr' ? 'Sık Yapılan Hatalar' : language === 'de' ? 'Häufige Fehler' : language === 'es' ? 'Errores Comunes' : 'Common Mistakes'}
+                {t('common_mistakes')}
               </Text>
               <Card className="gap-xs">
                 {exercise.commonMistakesTr.map((mistake, i) => (

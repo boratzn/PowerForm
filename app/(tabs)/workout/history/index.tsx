@@ -1,6 +1,7 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card } from '../../../../src/components/ui';
@@ -9,6 +10,7 @@ import { formatDurationHuman } from '../../../../src/lib/calculations';
 import { getWorkoutHistory, type HistorySessionSummary } from '../../../../src/db/history';
 import { useAuthStore } from '../../../../src/stores/useAuthStore';
 import { useLanguageStore } from '../../../../src/stores/useLanguageStore';
+import { useProgramStore } from '../../../../src/stores/useProgramStore';
 
 function formatDate(timestampSeconds: number, lang: string): string {
   const d = new Date(timestampSeconds * 1000);
@@ -46,12 +48,73 @@ function getMonthYear(timestampSeconds: number, lang: string): string {
 export default function WorkoutHistoryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const userId = useAuthStore((s) => s.session?.user.id);
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
 
   const [history, setHistory] = useState<HistorySessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const createProgramFromPastSession = useProgramStore((s) => s.createProgramFromPastSession);
+
+  const handleGoBack = useCallback(() => {
+    if (from === 'profile') {
+      router.navigate('/(tabs)/profile');
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/workout');
+    }
+  }, [from, router]);
+
+  useEffect(() => {
+    if (from !== 'profile') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.navigate('/(tabs)/profile');
+      return true;
+    });
+    return () => sub.remove();
+  }, [from, router]);
+
+  const handleQuickActivate = (sess: HistorySessionSummary) => {
+    Alert.alert(
+      language === 'tr' ? 'Aktif Program Değiştirilsin mi?' : 'Set as Active Program?',
+      language === 'tr'
+        ? `"${sess.name || 'Bu antrenman'}" aktif antrenman programınız olarak ayarlanacak.`
+        : `"${sess.name || 'This workout'}" will be set as your active program.`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: language === 'tr' ? 'Evet, Aktif Yap' : 'Yes, Activate',
+          onPress: async () => {
+            try {
+              setActivatingId(sess.clientUuid);
+              await createProgramFromPastSession(sess.clientUuid, {
+                name: sess.name || undefined,
+                setActive: true,
+              });
+              Alert.alert(
+                language === 'tr' ? 'Başarılı' : 'Success',
+                language === 'tr' ? 'Aktif program değiştirildi!' : 'Active program updated!',
+                [
+                  {
+                    text: language === 'tr' ? 'Antrenmana Git' : 'Go to Workout',
+                    onPress: () => router.navigate('/workout'),
+                  },
+                  { text: t('ok') },
+                ]
+              );
+            } catch (err: any) {
+              Alert.alert(t('error'), err?.message || 'Hata oluştu.');
+            } finally {
+              setActivatingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const loadData = useCallback(() => {
     if (!userId) {
@@ -94,12 +157,22 @@ export default function WorkoutHistoryScreen() {
   );
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-primary px-lg"
-      contentContainerStyle={{
-        paddingTop: 16,
-        paddingBottom: insets.bottom + 32,
-        gap: 16,
+    <>
+      <Stack.Screen
+        options={{
+          headerLeft: from === 'profile' ? () => (
+            <Pressable onPress={handleGoBack} hitSlop={12} className="mr-3 p-1 active:opacity-70">
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </Pressable>
+          ) : undefined,
+        }}
+      />
+      <ScrollView
+        className="flex-1 bg-bg-primary px-lg"
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 32,
+          gap: 16,
       }}
     >
       {/* İstatistik Şeridi */}
@@ -166,7 +239,12 @@ export default function WorkoutHistoryScreen() {
             {sessions.map((sess) => (
               <Pressable
                 key={sess.clientUuid}
-                onPress={() => router.push(`/workout/history/${sess.clientUuid}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: `/workout/history/${sess.clientUuid}`,
+                    params: from ? { from } : undefined,
+                  })
+                }
               >
                 {({ pressed }) => (
                   <Card className={`gap-sm ${pressed ? 'opacity-80' : ''}`}>
@@ -210,6 +288,28 @@ export default function WorkoutHistoryScreen() {
                         {sess.exerciseNames.join(', ')}
                       </Text>
                     )}
+
+                    {/* Hızlı Aktif Yap Aksiyonu */}
+                    <View className="mt-xs flex-row items-center justify-between border-t border-bg-elevated/40 pt-xs">
+                      <Text className="text-[11px] text-text-muted">
+                        {language === 'tr' ? 'Detayları Gör →' : 'View Details →'}
+                      </Text>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleQuickActivate(sess);
+                        }}
+                        disabled={activatingId === sess.clientUuid}
+                        className="flex-row items-center gap-1 rounded-full bg-accent/15 px-2.5 py-1 active:opacity-70"
+                      >
+                        <Ionicons name="flash" size={12} color={colors.accent} />
+                        <Text className="text-[11px] font-bold text-accent">
+                          {activatingId === sess.clientUuid
+                            ? (language === 'tr' ? 'Ayarlanıyor…' : 'Setting…')
+                            : (language === 'tr' ? 'Aktif Program Yap' : 'Set as Active')}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </Card>
                 )}
               </Pressable>
@@ -217,6 +317,7 @@ export default function WorkoutHistoryScreen() {
           </View>
         ))
       )}
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }

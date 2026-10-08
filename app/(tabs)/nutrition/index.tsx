@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EditFoodEntryModal } from '../../../src/components/nutrition/EditFoodEntryModal';
 import { FoodPickerSheet } from '../../../src/components/nutrition/FoodPickerSheet';
+import { FoodVisionModal } from '../../../src/components/nutrition/FoodVisionModal';
 import { TargetEditorModal } from '../../../src/components/nutrition/TargetEditorModal';
 import { Button, Card, StatusModal } from '../../../src/components/ui';
 import { colors } from '../../../src/constants/theme';
@@ -74,6 +75,8 @@ export default function NutritionScreen() {
 
   const [pickerMeal, setPickerMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [foodVisionVisible, setFoodVisionVisible] = useState(false);
+  const [visionMeal, setVisionMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [targetModalVisible, setTargetModalVisible] = useState(false);
   const [editingEntry, setEditingEntry] = useState<NutritionEntryItem | null>(null);
 
@@ -261,6 +264,35 @@ export default function NutritionScreen() {
           </View>
         ) : (
           <>
+            {/* AI Fotoğraftan Tanıma Hızlı Kartı */}
+            <Pressable
+              onPress={() => {
+                setVisionMeal('lunch');
+                setFoodVisionVisible(true);
+              }}
+              className="flex-row items-center justify-between p-3.5 rounded-2xl bg-bg-surface border border-accent/40 active:opacity-80 shadow-sm"
+            >
+              <View className="flex-row items-center gap-3 flex-1 mr-2">
+                <View className="h-10 w-10 rounded-xl bg-accent/20 items-center justify-center">
+                  <Ionicons name="camera" size={20} color={colors.accent} />
+                </View>
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-sm font-bold text-text-primary">
+                      {t('food_vision_title')}
+                    </Text>
+                    <View className="bg-accent px-1.5 py-0.5 rounded-md">
+                      <Text className="text-[9px] font-extrabold text-[#0B0F14]">AI</Text>
+                    </View>
+                  </View>
+                  <Text className="text-[11px] text-text-muted mt-0.5" numberOfLines={1}>
+                    {t('food_vision_subtitle')}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.accent} />
+            </Pressable>
+
             {/* Kalori & Makro İlerleme Kartı */}
             <Card className="gap-md">
               <View className="flex-row items-center justify-between border-b border-bg-elevated pb-sm">
@@ -423,16 +455,31 @@ export default function NutritionScreen() {
                       </View>
                     )}
 
-                    {/* + Besin Ekle Butonu */}
-                    <Button
-                      label={t('add_food')}
-                      variant="secondary"
-                      className="mt-xs min-h-[40px] py-1"
-                      onPress={() => {
-                        setPickerMeal(mealGroup.meal);
-                        setPickerVisible(true);
-                      }}
-                    />
+                    {/* + Besin Ekle ve AI Kamera Butonları */}
+                    <View className="flex-row items-center gap-2 mt-xs">
+                      <View className="flex-1">
+                        <Button
+                          label={t('add_food')}
+                          variant="secondary"
+                          className="min-h-[40px] py-1"
+                          onPress={() => {
+                            setPickerMeal(mealGroup.meal);
+                            setPickerVisible(true);
+                          }}
+                        />
+                      </View>
+                      <Pressable
+                        onPress={() => {
+                          setVisionMeal(mealGroup.meal);
+                          setFoodVisionVisible(true);
+                        }}
+                        hitSlop={6}
+                        className="h-10 px-3 flex-row items-center justify-center gap-1.5 rounded-xl bg-accent/15 border border-accent/30 active:opacity-70"
+                      >
+                        <Ionicons name="camera" size={16} color={colors.accent} />
+                        <Text className="text-xs font-bold text-accent">AI</Text>
+                      </Pressable>
+                    </View>
                   </Card>
                 );
               })}
@@ -441,11 +488,22 @@ export default function NutritionScreen() {
         )}
       </ScrollView>
 
+      {/* AI Fotoğraftan Yemek Tanıma Modalı */}
+      <FoodVisionModal
+        visible={foodVisionVisible}
+        initialMeal={visionMeal}
+        onClose={() => setFoodVisionVisible(false)}
+      />
+
       {/* Besin Arama / Porsiyon Modalı */}
       <FoodPickerSheet
         visible={pickerVisible}
         initialMeal={pickerMeal}
         onClose={() => setPickerVisible(false)}
+        onOpenFoodVision={() => {
+          setVisionMeal(pickerMeal);
+          setFoodVisionVisible(true);
+        }}
       />
 
       {/* Besin Düzenleyici Modalı */}

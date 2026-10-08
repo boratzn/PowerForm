@@ -12,6 +12,8 @@ import {
   workoutSessions,
 } from './schema';
 
+import { getSleepSummary, type SleepPeriodSummary } from './sleepLogs';
+
 export type ExerciseProgressItem = {
   exerciseId: string;
   name: string;
@@ -52,6 +54,16 @@ export type WeeklyCoachData = {
     avgDailyKcal: number | null;
     avgDailyProteinG: number | null;
     loggedDaysCount: number;
+  };
+  sleepSummary: {
+    avgDurationHours: number;
+    avgDurationMinutes: number;
+    avgBedtime: string;
+    avgWakeTime: string;
+    avgQuality: number;
+    loggedDaysCount: number;
+    consistencyScore: number;
+    recoveryStatus: 'optimal' | 'moderate' | 'insufficient' | 'no_data';
   };
 };
 
@@ -300,6 +312,9 @@ export async function getWeeklyCoachData(userId: string): Promise<WeeklyCoachDat
   const avgDailyKcal = loggedDaysCount > 0 ? Math.round(totalKcal / loggedDaysCount) : null;
   const avgDailyProteinG = loggedDaysCount > 0 ? Math.round(totalProtein / loggedDaysCount) : null;
 
+  // 4. Uyku Verilerini Çek (Son 7 gün)
+  const sleepSummaryRes = await getSleepSummary(userId, 'week');
+
   return {
     periodLabel: `${sevenDaysAgoStr} – ${todayStr}`,
     startDateStr: sevenDaysAgoStr,
@@ -324,6 +339,16 @@ export async function getWeeklyCoachData(userId: string): Promise<WeeklyCoachDat
       avgDailyKcal,
       avgDailyProteinG,
       loggedDaysCount,
+    },
+    sleepSummary: {
+      avgDurationHours: sleepSummaryRes.avgDurationHours,
+      avgDurationMinutes: sleepSummaryRes.avgDurationMinutes,
+      avgBedtime: sleepSummaryRes.avgBedtime,
+      avgWakeTime: sleepSummaryRes.avgWakeTime,
+      avgQuality: sleepSummaryRes.avgQuality,
+      loggedDaysCount: sleepSummaryRes.loggedDaysCount,
+      consistencyScore: sleepSummaryRes.consistencyScore,
+      recoveryStatus: sleepSummaryRes.recoveryStatus,
     },
   };
 }

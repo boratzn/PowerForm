@@ -13,45 +13,151 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../constants/theme';
+import type { Language } from '../../lib/i18n';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 import { useSubscriptionStore } from '../../stores/useSubscriptionStore';
 import { Button, Card, StatusModal } from '../ui';
 
-const FEATURES = [
-  {
-    icon: 'sparkles',
-    color: '#F59E0B',
-    title: 'Akıllı AI Koç & Analiz',
-    desc: 'Antrenman, kilo ve beslenme geçmişini tek bir beyinde birleştirir.',
-  },
-  {
-    icon: 'trending-up',
-    color: '#4ADE80',
-    title: 'Haftalık Gelişim & Plato Analizi',
-    desc: 'Ağırlık artıramadığın, takıldığın veya gerileyen hareketleri anında yakalar.',
-  },
-  {
-    icon: 'barbell',
-    color: '#38BDF8',
-    title: 'Kişisel Egzersiz Reçetesi',
-    desc: 'Takıldığın hareketler için açı, varyasyon, tekrar veya deload önerileri sunar.',
-  },
-  {
-    icon: 'chatbubbles',
-    color: '#A855F7',
-    title: 'Sınırsız Etkileşim & Check-in',
-    desc: 'Haftalık toparlanma, eklem ağrısı ve form sorularına kişiye özel rehberlik.',
-  },
-  {
-    icon: 'nutrition',
-    color: '#10B981',
-    title: 'Gelişmiş Beslenme & Makro Takibi',
-    desc: 'Detaylı besin veri tabanı, öğün bazlı kalori/makro kaydı ve hedef hesaplayıcı.',
-  },
-];
+const FEATURES_BY_LANG: Record<
+  Language,
+  Array<{ icon: string; color: string; title: string; desc: string }>
+> = {
+  tr: [
+    {
+      icon: 'sparkles',
+      color: '#F59E0B',
+      title: 'Akıllı AI Koç & Analiz',
+      desc: 'Antrenman, kilo ve beslenme geçmişini tek bir beyinde birleştirir.',
+    },
+    {
+      icon: 'trending-up',
+      color: '#4ADE80',
+      title: 'Haftalık Gelişim & Plato Analizi',
+      desc: 'Ağırlık artıramadığın, takıldığın veya gerileyen hareketleri anında yakalar.',
+    },
+    {
+      icon: 'barbell',
+      color: '#38BDF8',
+      title: 'Kişisel Egzersiz Reçetesi',
+      desc: 'Takıldığın hareketler için açı, varyasyon, tekrar veya deload önerileri sunar.',
+    },
+    {
+      icon: 'chatbubbles',
+      color: '#A855F7',
+      title: 'Sınırsız Etkileşim & Check-in',
+      desc: 'Haftalık toparlanma, eklem ağrısı ve form sorularına kişiye özel rehberlik.',
+    },
+    {
+      icon: 'nutrition',
+      color: '#10B981',
+      title: 'Gelişmiş Beslenme & Makro Takibi',
+      desc: 'Detaylı besin veri tabanı, öğün bazlı kalori/makro kaydı ve hedef hesaplayıcı.',
+    },
+  ],
+  en: [
+    {
+      icon: 'sparkles',
+      color: '#F59E0B',
+      title: 'Intelligent AI Coach & Insights',
+      desc: 'Unifies workout, weight trend, and nutrition history into one brain.',
+    },
+    {
+      icon: 'trending-up',
+      color: '#4ADE80',
+      title: 'Weekly Progress & Plateau Analysis',
+      desc: 'Instantly identifies stalls, plateaued lifts, or regress in performance.',
+    },
+    {
+      icon: 'barbell',
+      color: '#38BDF8',
+      title: 'Personalized Exercise Prescription',
+      desc: 'Provides technique cues, variations, rep ranges, or deload advice.',
+    },
+    {
+      icon: 'chatbubbles',
+      color: '#A855F7',
+      title: 'Unlimited Interactions & Check-ins',
+      desc: 'Weekly recovery, joint fatigue, and form questions with tailored coaching.',
+    },
+    {
+      icon: 'nutrition',
+      color: '#10B981',
+      title: 'Advanced Nutrition & Macro Tracking',
+      desc: 'Comprehensive food database, meal-by-meal logging, and target calculator.',
+    },
+  ],
+  de: [
+    {
+      icon: 'sparkles',
+      color: '#F59E0B',
+      title: 'Intelligenter KI-Coach & Analyse',
+      desc: 'Kombiniert Trainings-, Gewichts- und Ernährungsverlauf intelligent.',
+    },
+    {
+      icon: 'trending-up',
+      color: '#4ADE80',
+      title: 'Wöchentlicher Fortschritt & Plateau-Erkennung',
+      desc: 'Erkennt Stagnationen und Kraftrückgänge automatisch.',
+    },
+    {
+      icon: 'barbell',
+      color: '#38BDF8',
+      title: 'Personalisierte Übungsempfehlungen',
+      desc: 'Bietet Technik-Tipps, Übungsvariationen und Deload-Strategien.',
+    },
+    {
+      icon: 'chatbubbles',
+      color: '#A855F7',
+      title: 'Unbegrenzte Interaktion & Check-ins',
+      desc: 'Individuelle Betreuung bei Regeneration, Gelenkbeschwerden und Technik.',
+    },
+    {
+      icon: 'nutrition',
+      color: '#10B981',
+      title: 'Erweitertes Ernährungs- & Makro-Tracking',
+      desc: 'Umfangreiche Lebensmitteldatenbank und Mahlzeiten-Tracking.',
+    },
+  ],
+  es: [
+    {
+      icon: 'sparkles',
+      color: '#F59E0B',
+      title: 'Coach Inteligente con IA y Análisis',
+      desc: 'Combina historial de entrenamientos, peso y nutrición en una sola mente.',
+    },
+    {
+      icon: 'trending-up',
+      color: '#4ADE80',
+      title: 'Progreso Semanal y Análisis de Estancamiento',
+      desc: 'Detecta de inmediato movimientos estancados o con fatiga acumulada.',
+    },
+    {
+      icon: 'barbell',
+      color: '#38BDF8',
+      title: 'Prescripción de Ejercicios Personalizada',
+      desc: 'Sugerencias de ángulos, variaciones, repeticiones o descargas (deload).',
+    },
+    {
+      icon: 'chatbubbles',
+      color: '#A855F7',
+      title: 'Interacción Ilimitada y Check-in',
+      desc: 'Orientación adaptada sobre recuperación, dolor articular y técnica.',
+    },
+    {
+      icon: 'nutrition',
+      color: '#10B981',
+      title: 'Seguimiento Nutricional y Macros Avanzado',
+      desc: 'Base de datos completa, registro por comidas y calculadora de objetivos.',
+    },
+  ],
+};
 
 export function PaywallModal() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const lang = useLanguageStore((s) => s.language);
+  const t = useLanguageStore((s) => s.t);
+  const features = FEATURES_BY_LANG[lang] || FEATURES_BY_LANG.en;
 
   const isPro = useSubscriptionStore((s) => s.isPro);
   const paywallVisible = useSubscriptionStore((s) => s.paywallVisible);
@@ -183,16 +289,16 @@ export function PaywallModal() {
           {/* Başlık & Spot */}
           <View className="gap-xs pt-xs">
             <Text className="text-2xl font-bold tracking-tight text-text-primary">
-              Yapay Zeka Koçunuzla Sınırlarınızı Aşın
+              {t('paywall_headline')}
             </Text>
             <Text className="text-sm text-text-muted">
-              Antrenman kayıtlarınızı, kilo trendinizi ve makrolarınızı analiz eden kişisel koçunuz her an yanınızda.
+              {t('paywall_subheadline')}
             </Text>
           </View>
 
           {/* Özellikler Kartı */}
           <Card className="gap-md bg-bg-surface/80 border border-bg-elevated">
-            {FEATURES.map((feat, idx) => (
+            {features.map((feat, idx) => (
               <View key={idx} className="flex-row items-start gap-md">
                 <View
                   className="h-9 w-9 items-center justify-center rounded-xl"
@@ -210,7 +316,7 @@ export function PaywallModal() {
 
           {/* Paket Seçenekleri */}
           <View className="gap-sm">
-            <Text className="text-xs font-bold uppercase tracking-wider text-text-muted">Planınızı Seçin</Text>
+            <Text className="text-xs font-bold uppercase tracking-wider text-text-muted">{t('select_your_plan')}</Text>
             <View className="gap-sm">
               {packages.map((pkg) => {
                 const isSelected = selectedPackageId === pkg.id;
@@ -255,7 +361,7 @@ export function PaywallModal() {
           <View className="gap-sm pt-xs">
             <Button
               label={
-                actionLoading || isLoading ? 'İşlem Sürüyor...' : 'Hemen Abone Ol ve Başla ➔'
+                actionLoading || isLoading ? t('loading') : t('subscribe_now_btn')
               }
               variant="primary"
               disabled={actionLoading || isLoading}
@@ -263,7 +369,7 @@ export function PaywallModal() {
               className="min-h-[52px]"
             />
             <Text className="text-center text-[11px] text-text-muted">
-              Seçtiğiniz plan doğrultusunda ödeme anında tahsil edilir. Aboneliğinizi dilediğiniz zaman Google Play üzerinden kolayca iptal edebilirsiniz.
+              {t('subscription_terms_notice')}
             </Text>
           </View>
 
@@ -291,7 +397,7 @@ export function PaywallModal() {
           {/* Alt Bağlantılar */}
           <View className="flex-row items-center justify-center gap-md py-sm">
             <Pressable onPress={handleRestore} disabled={actionLoading}>
-              <Text className="text-xs font-medium text-text-muted underline">Geri Yükle</Text>
+              <Text className="text-xs font-medium text-text-muted underline">{t('restore_purchases_btn')}</Text>
             </Pressable>
             <Text className="text-xs text-text-muted">·</Text>
             <Pressable
@@ -300,7 +406,7 @@ export function PaywallModal() {
                 router.push('/legal');
               }}
             >
-              <Text className="text-xs font-medium text-text-muted underline">Kullanım & Gizlilik</Text>
+              <Text className="text-xs font-medium text-text-muted underline">{t('terms_and_privacy')}</Text>
             </Pressable>
           </View>
         </ScrollView>

@@ -6,6 +6,7 @@ import { db } from './client';
 import { searchLocalExercises } from './queries';
 import { exercises, programDays, programExercises, programs } from './schema';
 import rawTemplates from './seed-data/templates.json';
+import { getSessionDetail } from './history';
 
 export type ProgramDayDetail = {
   clientUuid: string;
@@ -692,6 +693,82 @@ export async function saveAiGeneratedWorkout(
   } catch (err: any) {
     console.error('saveAiGeneratedWorkout hatası:', err);
     return { success: false, message: err?.message || 'Antrenman kaydedilemedi.' };
+  }
+}
+
+// Geçmiş bir antrenman seansını (history session) bağımsız veya aktif bir antrenman programına dönüştürür
+export async function createProgramFromPastSession(
+  sessionClientUuid: string,
+  userId: string,
+  options?: {
+    name?: string;
+    setActive?: boolean;
+    goal?: 'hypertrophy' | 'strength' | 'fat_loss' | 'recomp' | 'general_health';
+  }
+): Promise<{ success: boolean; programId?: string; message: string }> {
+  try {
+    const session = await getSessionDetail(sessionClientUuid);
+    if (!session) {
+      return { success: false, message: 'Antrenman seansı bulunamadı.' };
+    }
+
+    if (session.exercises.length === 0) {
+      return { success: false, message: 'Bu seansta kayıtlı egzersiz bulunmuyor.' };
+    }
+
+    const programName = options?.name?.trim() || session.name || 'Özel Antrenman';
+
+    const progExercises = session.exercises.map((ex, idx) => {
+      const completedSets = ex.sets.filter((s) => s.isCompleted);
+      const allSets = completedSets.length > 0 ? completedSets : ex.sets;
+      const targetSets = allSets.length > 0 ? allSets.length : 3;
+
+      const repsList = allSets.map((s) => s.reps).filter((r): r is number => r != null && r > 0);
+      const repMin = repsList.length > 0 ? Math.min(...repsList) : 8;
+      const repMax = repsList.length > 0 ? Math.max(...repsList) : 12;
+
+      const rirList = allSets.map((s) => s.rir).filter((r): r is number => r != null);
+      const targetRir = rirList.length > 0 ? Math.round(rirList.reduce((a, b) => a + b, 0) / rirList.length) : 2;
+
+      return {
+        exerciseId: ex.exerciseId,
+        orderIndex: idx + 1,
+        targetSets,
+        repMin: repMin === repMax ? repMin : Math.min(repMin, repMax),
+        repMax: Math.max(repMin, repMax),
+        targetRir,
+        restSeconds: 90,
+        notes: ex.notes ?? undefined,
+      };
+    });
+
+    const programUuid = await saveCustomProgram(
+      {
+        name: programName,
+        description: `Geçmiş antrenmandan oluşturuldu (${new Date(session.startedAt * 1000).toLocaleDateString('tr-TR')}).`,
+        goal: options?.goal || 'hypertrophy',
+        daysPerWeek: 1,
+        durationWeeks: 4,
+        setActive: options?.setActive ?? true,
+        days: [
+          {
+            name: session.name || '1. Gün',
+            focus: 'Özel Antrenman',
+            exercises: progExercises,
+          },
+        ],
+      },
+      userId
+    );
+
+    return {
+      success: true,
+      programId: programUuid,
+      message: `"${programName}" antrenmanı program olarak kaydedildi.`,
+    };
+  } catch (err: any) {
+    console.error('createProgramFromPastSession hatası:', err);
+    return { success: false, message: err?.message || 'Program oluşturulamadı.' };
   }
 }
 

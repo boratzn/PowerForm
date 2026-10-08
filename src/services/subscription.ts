@@ -101,27 +101,35 @@ class SubscriptionService {
 
   async checkIsPro(): Promise<boolean> {
     const profile = useAuthStore.getState().profile;
+    const isProfileDbPro = Boolean(profile?.is_pro);
 
-    // 1. RevenueCat yapılandırılmışsa ve aktifse, ana kaynak RevenueCat'tir
+    // 1. RevenueCat yapılandırılmışsa ve aktifse kontrol et
     if (this.isConfigured && !this.isMock) {
       try {
         const customerInfo = await Purchases.getCustomerInfo();
-        const hasActivePro = typeof customerInfo.entitlements.active['pro'] !== 'undefined';
+        const activeEntitlements = customerInfo?.entitlements?.active ?? {};
+        const hasActiveRcPro =
+          Object.keys(activeEntitlements).length > 0 ||
+          typeof activeEntitlements['pro'] !== 'undefined' ||
+          typeof activeEntitlements['Pro'] !== 'undefined' ||
+          typeof activeEntitlements['premium'] !== 'undefined';
 
-        // Eğer Supabase profilindeki is_pro durumu RevenueCat ile uyuşmuyorsa eşitle
-        if (profile?.id && profile.is_pro !== hasActivePro) {
-          await supabase.from('profiles').update({ is_pro: hasActivePro }).eq('id', profile.id);
+        // Eğer RevenueCat'te aktif Pro varsa ama Supabase'e henüz yazılmamışsa, Supabase'i de Pro yap
+        if (hasActiveRcPro && profile?.id && !profile.is_pro) {
+          await supabase.from('profiles').update({ is_pro: true }).eq('id', profile.id);
           await useAuthStore.getState().refreshProfile();
         }
 
-        return hasActivePro;
+        // Eğer hem veritabanında is_pro true ise VEYA RevenueCat'te aktif abonelik varsa -> Pro aktiftir!
+        // Veritabanındaki is_pro: true asla false'a çekilmez (manuel/test/admin hakları korunur).
+        return hasActiveRcPro || isProfileDbPro;
       } catch (err) {
         console.warn('[SubscriptionService] RevenueCat müşteri bilgisi okunamadı, profile bakılıyor:', err);
       }
     }
 
-    // 2. RevenueCat bağlı değilse veya mock modundaysa profil durumuna bak
-    return profile?.is_pro ?? false;
+    // 2. RevenueCat bağlı değilse, mock ise veya hata aldıysa veritabanı durumuna bak
+    return isProfileDbPro;
   }
 
   async getPackages(): Promise<SubscriptionPackage[]> {
@@ -188,7 +196,13 @@ class SubscriptionService {
     if (this.isConfigured && !this.isMock) {
       try {
         const customerInfo = await Purchases.getCustomerInfo();
-        const proEntitlement = customerInfo.entitlements.active['pro'];
+        const activeEntitlements = customerInfo?.entitlements?.active ?? {};
+        const proEntitlement =
+          activeEntitlements['pro'] ||
+          activeEntitlements['Pro'] ||
+          activeEntitlements['premium'] ||
+          Object.values(activeEntitlements)[0];
+
         if (proEntitlement) {
           const prodId = (proEntitlement.productIdentifier || '').toLowerCase();
           if (prodId.includes('annual') || prodId.includes('year')) {
@@ -242,7 +256,13 @@ class SubscriptionService {
         }
       }
 
-      const isPro = customerInfo && typeof customerInfo.entitlements.active['pro'] !== 'undefined';
+      const activeEntitlements = customerInfo?.entitlements?.active ?? {};
+      const isPro =
+        Object.keys(activeEntitlements).length > 0 ||
+        typeof activeEntitlements['pro'] !== 'undefined' ||
+        typeof activeEntitlements['Pro'] !== 'undefined' ||
+        typeof activeEntitlements['premium'] !== 'undefined';
+
       if (isPro) {
         this.mockActivePlan = isAnnual ? 'annual' : 'monthly';
         if (profile?.id) {
@@ -272,13 +292,19 @@ class SubscriptionService {
 
     try {
       const customerInfo = await Purchases.restorePurchases();
-      const isPro = typeof customerInfo.entitlements.active['pro'] !== 'undefined';
+      const activeEntitlements = customerInfo?.entitlements?.active ?? {};
+      const isPro =
+        Object.keys(activeEntitlements).length > 0 ||
+        typeof activeEntitlements['pro'] !== 'undefined' ||
+        typeof activeEntitlements['Pro'] !== 'undefined' ||
+        typeof activeEntitlements['premium'] !== 'undefined';
+
       const profile = useAuthStore.getState().profile;
       if (isPro && profile?.id) {
         await supabase.from('profiles').update({ is_pro: true }).eq('id', profile.id);
         await useAuthStore.getState().refreshProfile();
       }
-      return isPro;
+      return isPro || Boolean(profile?.is_pro);
     } catch (err) {
       console.error('[SubscriptionService] Geri yükleme hatası:', err);
       throw err;

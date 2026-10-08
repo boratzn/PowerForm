@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   FlatList,
@@ -28,6 +29,7 @@ type FoodPickerSheetProps = {
   visible: boolean;
   initialMeal?: MealType;
   onClose: () => void;
+  onOpenFoodVision?: () => void;
 };
 
 const MEALS: { key: MealType; label: string }[] = [
@@ -37,7 +39,12 @@ const MEALS: { key: MealType; label: string }[] = [
   { key: 'snack', label: 'Ara Öğün' },
 ];
 
-export function FoodPickerSheet({ visible, initialMeal = 'breakfast', onClose }: FoodPickerSheetProps) {
+export function FoodPickerSheet({
+  visible,
+  initialMeal = 'breakfast',
+  onClose,
+  onOpenFoodVision,
+}: FoodPickerSheetProps) {
   const insets = useSafeAreaInsets();
   const addFoodEntry = useNutritionStore((s) => s.addFoodEntry);
 
@@ -432,6 +439,31 @@ export function FoodPickerSheet({ visible, initialMeal = 'breakfast', onClose }:
         ) : (
           /* Besin Arama Listesi */
           <>
+            {onOpenFoodVision && (
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  onOpenFoodVision();
+                }}
+                className="mb-sm flex-row items-center justify-between p-3 rounded-xl bg-accent/10 border border-accent/30 active:opacity-75"
+              >
+                <View className="flex-row items-center gap-2.5">
+                  <View className="h-7 w-7 rounded-lg bg-accent/20 items-center justify-center">
+                    <Ionicons name="camera" size={16} color={colors.accent} />
+                  </View>
+                  <View>
+                    <Text className="text-xs font-bold text-accent">
+                      📸 Fotoğraftan Tanı (AI Kalori & Makro)
+                    </Text>
+                    <Text className="text-[10px] text-text-muted">
+                      Tabağın fotoğrafını çek, AI anında hesaplasın
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+              </Pressable>
+            )}
+
             <View className="flex-row items-center gap-sm">
               <View className="flex-1">
                 <Input

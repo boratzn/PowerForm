@@ -13,6 +13,7 @@ import {
   getExerciseDisplayName,
   getMuscleDisplayName,
 } from '../../../src/lib/i18n';
+import { BannerAdView } from '../../../src/components/ads';
 
 export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
@@ -116,8 +117,10 @@ export default function LibraryScreen() {
         ListEmptyComponent={
           !loading ? <Text className="mt-lg text-center text-text-muted">{t('no_results')}</Text> : null
         }
-        contentContainerStyle={{ paddingTop: 4, paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingTop: 4, paddingBottom: 16 }}
       />
+
+      <BannerAdView />
     </View>
   );
 }

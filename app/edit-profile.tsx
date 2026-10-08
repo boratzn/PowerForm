@@ -15,8 +15,15 @@ import {
   type Goal,
   type Sex,
 } from '../src/constants/enumOptions';
+import {
+  getEquipmentDisplayName,
+  getExperienceDisplayName,
+  getGoalDisplayName,
+  getSexDisplayName,
+} from '../src/lib/i18n';
 import { supabase } from '../src/lib/supabase';
 import { useAuthStore } from '../src/stores/useAuthStore';
+import { useLanguageStore } from '../src/stores/useLanguageStore';
 import type { Database } from '../src/types/database';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -31,6 +38,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useLanguageStore((s) => s.t);
+  const lang = useLanguageStore((s) => s.language);
 
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
@@ -84,8 +93,8 @@ export default function EditProfileScreen() {
       }
 
       await refreshProfile();
-      Alert.alert('Başarılı', 'Profil bilgileriniz güncellendi.', [
-        { text: 'Tamam', onPress: () => router.back() },
+      Alert.alert(t('success'), t('profile_updated'), [
+        { text: t('ok'), onPress: () => router.back() },
       ]);
     } catch (err: any) {
       setError(err?.message ?? 'Profil güncellenirken bir hata oluştu.');
@@ -106,13 +115,13 @@ export default function EditProfileScreen() {
       >
         {/* Header */}
         <View className="flex-row items-center justify-between border-b border-bg-elevated px-md py-sm">
-          <Text className="text-lg font-bold text-text-primary">Profili Düzenle</Text>
+          <Text className="text-lg font-bold text-text-primary">{t('edit_profile_header')}</Text>
           <Pressable
             hitSlop={12}
             onPress={() => router.back()}
             className="rounded-full bg-bg-surface px-3 py-1.5 active:opacity-70"
           >
-            <Text className="text-xs font-semibold text-text-muted">Kapat</Text>
+            <Text className="text-xs font-semibold text-text-muted">{t('close')}</Text>
           </Pressable>
         </View>
 
@@ -121,11 +130,11 @@ export default function EditProfileScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingTop: 16, paddingBottom: 32, gap: 20 }}
         >
-        <Section title="Cinsiyet">
+        <Section title={t('gender_label')}>
           {SEX_OPTIONS.map((opt) => (
             <Chip
               key={opt.value}
-              label={opt.label}
+              label={getSexDisplayName(opt.value, lang)}
               selected={sex === opt.value}
               onPress={() => setSex(opt.value)}
             />
@@ -134,7 +143,7 @@ export default function EditProfileScreen() {
 
         <View className="flex-row gap-md">
           <View className="flex-1 gap-xs">
-            <Text className="text-xs font-bold text-text-muted">Boy (cm)</Text>
+            <Text className="text-xs font-bold text-text-muted">{t('height_label')}</Text>
             <Input
               placeholder="178"
               keyboardType="numeric"
@@ -143,7 +152,7 @@ export default function EditProfileScreen() {
             />
           </View>
           <View className="flex-1 gap-xs">
-            <Text className="text-xs font-bold text-text-muted">Doğum Yılı</Text>
+            <Text className="text-xs font-bold text-text-muted">{t('birth_year_label')}</Text>
             <Input
               placeholder="1995"
               keyboardType="numeric"
@@ -153,44 +162,44 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        <Section title="Antrenman Deneyimi">
+        <Section title={t('experience_section')}>
           {EXPERIENCE_OPTIONS.map((opt) => (
             <Chip
               key={opt.value}
-              label={opt.label}
+              label={getExperienceDisplayName(opt.value, lang)}
               selected={experience === opt.value}
               onPress={() => setExperience(opt.value)}
             />
           ))}
         </Section>
 
-        <Section title="Ana Hedef">
+        <Section title={t('main_goal_section')}>
           {GOAL_OPTIONS.map((opt) => (
             <Chip
               key={opt.value}
-              label={opt.label}
+              label={getGoalDisplayName(opt.value, lang)}
               selected={primaryGoal === opt.value}
               onPress={() => setPrimaryGoal(opt.value)}
             />
           ))}
         </Section>
 
-        <Section title="Haftalık Antrenman Hedefi">
+        <Section title={t('weekly_days_target_section')}>
           {DAYS_OPTIONS.map((days) => (
             <Chip
               key={days}
-              label={`${days} gün`}
+              label={`${days} ${t('days')}`}
               selected={trainingDays === days}
               onPress={() => setTrainingDays(days)}
             />
           ))}
         </Section>
 
-        <Section title="Mevcut Ekipmanlar">
+        <Section title={t('available_equipment_section')}>
           {EQUIPMENT_OPTIONS.map((opt) => (
             <Chip
               key={opt.value}
-              label={opt.label}
+              label={getEquipmentDisplayName(opt.value, lang)}
               selected={equipment.includes(opt.value)}
               onPress={() => toggleEquipment(opt.value)}
             />
@@ -200,7 +209,7 @@ export default function EditProfileScreen() {
         {error && <Text className="text-sm text-danger">{error}</Text>}
 
         <Button
-          label={saving ? 'Kaydediliyor…' : 'Değişiklikleri Kaydet'}
+          label={saving ? t('saving') : t('save_changes')}
           className="mt-sm"
           onPress={handleSave}
           disabled={saving}

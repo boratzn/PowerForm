@@ -3,7 +3,7 @@
     "name": "Powerform",
     "slug": "Powerform",
     "scheme": "powerform",
-    "version": "1.0.7",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.powerform.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "adaptiveIcon": {
         "backgroundColor": "#0B0F14",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -37,7 +37,14 @@
       "expo-notifications",
       "expo-image",
       "expo-localization",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4725502493968424~2793788449",
+          "iosAppId": "ca-app-pub-3940256099942544~1458602516"
+        }
+      ]
     ]
   }
 }

@@ -19,7 +19,9 @@ import type { LocalExercise } from '../src/db/queries';
 import { calculateVolume, formatDurationHuman } from '../src/lib/calculations';
 import { cancelRestEndNotification, scheduleRestEndNotification } from '../src/lib/restNotification';
 import { useLanguageStore } from '../src/stores/useLanguageStore';
+import { useProgramStore } from '../src/stores/useProgramStore';
 import { useSessionStore } from '../src/stores/useSessionStore';
+import { adService } from '../src/services/adService';
 
 type ActiveFieldRef = { exerciseClientUuid: string; setClientUuid: string; field: ActiveField } | null;
 
@@ -67,13 +69,17 @@ export default function SessionScreen() {
     durationSeconds: number;
     totalVolumeKg: number;
     prCount: number;
+    sessionClientUuid: string;
   } | null>(null);
+  const [savedAsProgram, setSavedAsProgram] = useState(false);
   const [deleteSetTarget, setDeleteSetTarget] = useState<{
     exerciseClientUuid: string;
     setClientUuid: string;
   } | null>(null);
 
+  const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
+  const createProgramFromPastSession = useProgramStore((s) => s.createProgramFromPastSession);
   const isEndingRef = useRef(false);
   const isInitializedRef = useRef(false);
   const sessionScrollViewRef = useRef<ScrollView>(null);
@@ -232,6 +238,24 @@ export default function SessionScreen() {
     }
   };
 
+  const handleSaveCompletedSessionAsProgram = async () => {
+    if (!completedSummary?.sessionClientUuid) return;
+    try {
+      await createProgramFromPastSession(completedSummary.sessionClientUuid, {
+        setActive: true,
+      });
+      setSavedAsProgram(true);
+      Alert.alert(
+        language === 'tr' ? 'Başarılı' : 'Success',
+        language === 'tr'
+          ? 'Bu antrenman programlarınıza kaydedildi ve aktif program olarak ayarlandı!'
+          : 'This workout has been saved as your program and set as active!'
+      );
+    } catch (err: any) {
+      Alert.alert(t('error'), err?.message || (language === 'tr' ? 'Antrenman kaydedilemedi.' : 'Could not save program.'));
+    }
+  };
+
   return (
     <View className="flex-1 bg-bg-primary" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center justify-between border-b border-bg-elevated px-lg pb-sm">
@@ -333,8 +357,10 @@ export default function SessionScreen() {
           durationSeconds={completedSummary.durationSeconds}
           totalVolumeKg={completedSummary.totalVolumeKg}
           prCount={completedSummary.prCount}
+          onSaveAsProgram={savedAsProgram ? undefined : handleSaveCompletedSessionAsProgram}
           onClose={() => {
             setCompletedSummary(null);
+            adService.showInterstitial();
             router.back();
           }}
         />

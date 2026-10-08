@@ -12,12 +12,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { db } from '../src/db/client';
+import { db, sqlite } from '../src/db/client';
 import migrations from '../src/db/migrations/migrations';
 import { seedLocalExercisesIfEmpty } from '../src/db/seedExercises';
 import { seedLocalFoodsIfEmpty } from '../src/db/nutrition';
@@ -31,6 +31,7 @@ import { useProgramStore } from '../src/stores/useProgramStore';
 import { useSessionStore } from '../src/stores/useSessionStore';
 import { useSubscriptionStore } from '../src/stores/useSubscriptionStore';
 import { useLanguageStore } from '../src/stores/useLanguageStore';
+import { adService } from '../src/services/adService';
 
 export default function RootLayout() {
   // Yerel SQLite tabloları uygulama her açıldığında burada oluşturulur/güncellenir —
@@ -40,6 +41,7 @@ export default function RootLayout() {
 
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
+  const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const authInitializing = useAuthStore((s) => s.isInitializing);
   const isProfileLoading = useAuthStore((s) => s.isProfileLoading);
   const initializeAuth = useAuthStore((s) => s.initialize);
@@ -50,6 +52,7 @@ export default function RootLayout() {
   useEffect(() => {
     initializeAuth();
     useLanguageStore.getState().initializeLanguage();
+    adService.initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -95,32 +98,53 @@ export default function RootLayout() {
     drainSyncQueue().catch((err) => console.warn('[RootLayout] Senkron kuyruğu hatası:', err));
   }, [migrationsReady, session]);
 
+  const [splashTimeout, setSplashTimeout] = useState(false);
+
+  useEffect(() => {
+    // 4 saniye içinde splash kalkmazsa güvenlik amacıyla zorla kapat
+    const timer = setTimeout(() => {
+      setSplashTimeout(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // §11 onboarding akışı: session yoksa (auth), session var ama onboarding_done=false
   // ise (onboarding), ikisi de tamamsa (tabs). Yalnızca uygulamanın İLK açılışında
   // (profil henüz hiç yüklenmemişken) splash gösterilir. Arka plandaki profil/token
   // yenilemeleri navigasyon ağacını unmount etmemelidir.
-  const isInitialLoading = !migrationsReady || authInitializing || (session != null && profile == null && isProfileLoading);
+  const isInitialLoading =
+    !splashTimeout &&
+    (!migrationsReady ||
+      authInitializing ||
+      (session != null && (profile == null || isProfileLoading)));
+
+  const showSplash = isInitialLoading && !migrationsError;
 
   useEffect(() => {
     if (isInitialLoading) return;
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboardingGroup = segments[0] === '(onboarding)';
 
+    const onboardingFinished = Boolean(profile?.onboarding_done || hasCompletedOnboarding);
+
     if (!session && !inAuthGroup) {
       router.replace('/login');
-    } else if (session && !profile?.onboarding_done && !inOnboardingGroup) {
-      router.replace('/welcome');
-    } else if (session && profile?.onboarding_done && (inAuthGroup || inOnboardingGroup)) {
+    } else if (session && !onboardingFinished && !inOnboardingGroup) {
+      // Sadece profil net olarak kesinleşmişse ve tamamlanmamışsa onboarding'e git
+      if (profile !== null && !isProfileLoading) {
+        router.replace('/welcome');
+      }
+    } else if (session && onboardingFinished && (inAuthGroup || inOnboardingGroup)) {
       router.replace('/');
     }
-  }, [isInitialLoading, session, profile, segments, router]);
+  }, [isInitialLoading, session, profile, isProfileLoading, hasCompletedOnboarding, segments, router]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0B0F14' }}>
+      <SafeAreaProvider style={{ flex: 1, backgroundColor: '#0B0F14' }}>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0B0F14' } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
@@ -128,13 +152,17 @@ export default function RootLayout() {
             <Stack.Screen name="session" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="weight-trend" options={{ presentation: 'modal' }} />
             <Stack.Screen name="body-measurements" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="sleep-tracker" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="future-simulation" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="transformation-card" options={{ presentation: 'modal' }} />
             <Stack.Screen name="legal" options={{ presentation: 'modal' }} />
             <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="personal-records" options={{ presentation: 'modal' }} />
           </Stack>
           <PaywallModal />
 
           {/* Navigasyon ağacını unmount etmeden üst katmanda gösterilen yüklenme durumu */}
-          {isInitialLoading && (
+          {showSplash && (
             <View style={StyleSheet.absoluteFill} className="z-50">
               <SplashScreenView />
             </View>
@@ -143,11 +171,26 @@ export default function RootLayout() {
           {migrationsError && (
             <View
               style={StyleSheet.absoluteFill}
-              className="items-center justify-center bg-bg-primary p-lg z-50"
+              className="items-center justify-center bg-bg-primary p-lg z-50 gap-md"
             >
-              <Text className="text-center text-danger">
+              <Text className="text-center text-danger font-semibold">
                 Yerel veritabanı hazırlanamadı: {migrationsError.message}
               </Text>
+              <Pressable
+                onPress={() => {
+                  try {
+                    sqlite.execSync('DROP TABLE IF EXISTS sleep_logs;');
+                    router.replace('/');
+                  } catch (e) {
+                    console.error('[RootLayout] Onarım hatası:', e);
+                  }
+                }}
+                className="rounded-xl bg-accent px-lg py-3 active:opacity-80"
+              >
+                <Text className="text-sm font-bold text-[#0B0F14]">
+                  Veritabanını Onar ve Yeniden Başlat
+                </Text>
+              </Pressable>
             </View>
           )}
         </QueryClientProvider>

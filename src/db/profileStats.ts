@@ -143,3 +143,93 @@ export async function getLifetimeStats(userId: string): Promise<LifetimeStats> {
     topPRs,
   };
 }
+
+export type PersonalRecordDetail = {
+  exerciseId: string;
+  nameEn: string;
+  nameTr: string | null;
+  equipment: string;
+  maxWeightKg: number;
+  bestE1RM: number;
+  reps: number;
+  achievedAt: number;
+};
+
+export async function getAllPersonalRecords(userId: string): Promise<PersonalRecordDetail[]> {
+  const rows = await db
+    .select({
+      exerciseId: sessionExercises.exerciseId,
+      weightKg: sessionSets.weightKg,
+      reps: sessionSets.reps,
+      rir: sessionSets.rir,
+      completedAt: sessionSets.completedAt,
+    })
+    .from(sessionSets)
+    .innerJoin(
+      sessionExercises,
+      eq(sessionExercises.clientUuid, sessionSets.sessionExerciseClientUuid)
+    )
+    .innerJoin(
+      workoutSessions,
+      eq(workoutSessions.clientUuid, sessionExercises.sessionClientUuid)
+    )
+    .where(
+      and(
+        eq(workoutSessions.userId, userId),
+        eq(sessionSets.isCompleted, true),
+        eq(workoutSessions.status, 'completed')
+      )
+    );
+
+  if (rows.length === 0) return [];
+
+  const bestByExercise = new Map<
+    string,
+    { maxWeightKg: number; bestE1RM: number; reps: number; achievedAt: number }
+  >();
+
+  for (const r of rows) {
+    if (r.weightKg == null || r.reps == null || r.weightKg <= 0 || r.reps <= 0) continue;
+    const e1rm = estimate1RM(r.weightKg, r.reps, r.rir);
+    const existing = bestByExercise.get(r.exerciseId);
+
+    if (!existing || e1rm > existing.bestE1RM) {
+      bestByExercise.set(r.exerciseId, {
+        maxWeightKg: r.weightKg,
+        bestE1RM: Math.round(e1rm * 10) / 10,
+        reps: r.reps,
+        achievedAt: r.completedAt,
+      });
+    }
+  }
+
+  const exIds = Array.from(bestByExercise.keys());
+  if (exIds.length === 0) return [];
+
+  const exRows = await db
+    .select({
+      id: exercises.id,
+      nameEn: exercises.nameEn,
+      nameTr: exercises.nameTr,
+      equipment: exercises.equipment,
+    })
+    .from(exercises)
+    .where(inArray(exercises.id, exIds));
+
+  return exRows
+    .map((ex) => {
+      const pr = bestByExercise.get(ex.id)!;
+      return {
+        exerciseId: ex.id,
+        nameEn: ex.nameEn,
+        nameTr: ex.nameTr,
+        equipment: ex.equipment,
+        maxWeightKg: pr.maxWeightKg,
+        bestE1RM: pr.bestE1RM,
+        reps: pr.reps,
+        achievedAt: pr.achievedAt,
+      };
+    })
+    .sort((a, b) => b.bestE1RM - a.bestE1RM);
+}
+

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../../constants/theme';
 import type { CheckInAnswers } from '../../services/aiCoach';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 import { Button, Card, Input } from '../ui';
 
 type WeeklyCheckInModalProps = {
@@ -21,6 +22,7 @@ export function WeeklyCheckInModal({
   isGenerating,
 }: WeeklyCheckInModalProps) {
   const insets = useSafeAreaInsets();
+  const t = useLanguageStore((s) => s.t);
 
   const [sleepRecovery, setSleepRecovery] = useState<number>(4);
   const [jointPain, setJointPain] = useState<'none' | 'mild' | 'severe'>('none');
@@ -50,8 +52,8 @@ export function WeeklyCheckInModal({
           {/* Üst Bar */}
           <View className="flex-row items-center justify-between pb-sm border-b border-bg-elevated">
             <View>
-              <Text className="text-xl font-bold text-text-primary">Haftalık Check-In</Text>
-              <Text className="text-xs text-text-muted">Kişiselleştirilmiş analiz için 3 hızlı soru</Text>
+              <Text className="text-xl font-bold text-text-primary">{t('weekly_checkin_title')}</Text>
+              <Text className="text-xs text-text-muted">{t('weekly_checkin_subtitle')}</Text>
             </View>
             <Pressable
               onPress={onClose}
@@ -72,11 +74,11 @@ export function WeeklyCheckInModal({
             <View className="flex-row items-center gap-xs">
               <Ionicons name="moon-outline" size={16} color="#38BDF8" />
               <Text className="text-xs font-bold uppercase text-text-muted">
-                1. Uyku ve Toparlanma Kaliten Nasildi?
+                {t('checkin_q1_title')}
               </Text>
             </View>
             <Text className="text-xs text-text-muted">
-              Sabahları dinç mi kalktın, kas ağrıların sonraki seanslara sarktı mı?
+              {t('checkin_q1_desc')}
             </Text>
             <View className="flex-row gap-xs pt-xs">
               {[1, 2, 3, 4, 5].map((val) => {
@@ -97,7 +99,7 @@ export function WeeklyCheckInModal({
                       {val}
                     </Text>
                     <Text className="text-[10px] text-text-muted mt-0.5">
-                      {val === 1 ? 'Çok Kötü' : val === 5 ? 'Harika' : `${val}/5`}
+                      {val === 1 ? t('sleep_quality_bad') : val === 5 ? t('sleep_quality_great') : `${val}/5`}
                     </Text>
                   </Pressable>
                 );
@@ -110,17 +112,17 @@ export function WeeklyCheckInModal({
             <View className="flex-row items-center gap-xs">
               <Ionicons name="fitness-outline" size={16} color="#F87171" />
               <Text className="text-xs font-bold uppercase text-text-muted">
-                2. Eklem Ağrısı veya Aşırı Yorgunluk
+                {t('checkin_q2_title')}
               </Text>
             </View>
             <Text className="text-xs text-text-muted">
-              Bel, omuz veya dizlerinde batma, hareket kısıtlılığı hissettin mi?
+              {t('checkin_q2_desc')}
             </Text>
             <View className="gap-xs pt-xs">
               {[
-                { key: 'none', label: 'Ağrı yok, enerjim çok iyi', color: '#4ADE80' },
-                { key: 'mild', label: 'Hafif sızı / eklem yorgunluğu var', color: '#FBBF24' },
-                { key: 'severe', label: 'Belirgin batma / aşırı tükenmişlik var', color: '#F87171' },
+                { key: 'none', label: t('joint_pain_none'), color: '#4ADE80' },
+                { key: 'mild', label: t('joint_pain_mild'), color: '#FBBF24' },
+                { key: 'severe', label: t('joint_pain_severe'), color: '#F87171' },
               ].map((opt) => {
                 const isSelected = jointPain === opt.key;
                 return (
@@ -156,17 +158,17 @@ export function WeeklyCheckInModal({
             <View className="flex-row items-center gap-xs">
               <Ionicons name="nutrition-outline" size={16} color="#4ADE80" />
               <Text className="text-xs font-bold uppercase text-text-muted">
-                3. Beslenme & Protein Sadakati
+                {t('checkin_q3_title')}
               </Text>
             </View>
             <Text className="text-xs text-text-muted">
-              Haftalık kalori ve protein hedeflerine ne kadar uyabildin?
+              {t('checkin_q3_desc')}
             </Text>
             <View className="flex-row gap-xs pt-xs">
               {[
-                { key: 'high', label: 'Tam Uydum (%90+)' },
-                { key: 'medium', label: 'Kısmen (%60-80)' },
-                { key: 'low', label: 'Düşük / Kaçamaklar Oldu' },
+                { key: 'high', label: t('nutrition_adh_high') },
+                { key: 'medium', label: t('nutrition_adh_medium') },
+                { key: 'low', label: t('nutrition_adh_low') },
               ].map((opt) => {
                 const isSelected = nutritionAdherence === opt.key;
                 return (
@@ -195,13 +197,13 @@ export function WeeklyCheckInModal({
             <View className="flex-row items-center gap-xs">
               <Ionicons name="create-outline" size={16} color="#A855F7" />
               <Text className="text-xs font-bold uppercase text-text-muted">
-                Koça Eklemek İstediğin Not (Opsiyonel)
+                {t('checkin_q4_title')}
               </Text>
             </View>
             <Input
               value={userNotes}
               onChangeText={setUserNotes}
-              placeholder="Örn. Incline press'te omuz açım batıyor, deadlift'i çıkarıp RDL mi yapsam?"
+              placeholder={t('checkin_q4_placeholder')}
               multiline
               className="min-h-[70px] text-xs pt-2"
             />
@@ -210,7 +212,7 @@ export function WeeklyCheckInModal({
           {/* Başlat Butonu */}
           <View className="pt-xs pb-md">
             <Button
-              label={isGenerating ? 'Yapay Zeka Analiz Ediyor...' : 'Verilerimi ve Yanıtlarımı Analiz Et →'}
+              label={isGenerating ? t('ai_analyzing') : t('analyze_answers_btn')}
               variant="primary"
               disabled={isGenerating}
               onPress={handleSubmit}

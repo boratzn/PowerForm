@@ -87,7 +87,7 @@ type SessionState = {
   syncRestTimer: () => void;
   adjustRestTimer: (deltaSeconds: number) => void;
   skipRestTimer: () => void;
-  endSession: () => Promise<{ durationSeconds: number; totalVolumeKg: number; prCount: number }>;
+  endSession: () => Promise<{ durationSeconds: number; totalVolumeKg: number; prCount: number; sessionClientUuid: string }>;
   reset: () => void;
 };
 
@@ -595,7 +595,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     }
 
-    return { durationSeconds: endedAt - startedAt, totalVolumeKg, prCount };
+    return { durationSeconds: endedAt - startedAt, totalVolumeKg, prCount, sessionClientUuid };
   },
 
   reset: () => set({ sessionClientUuid: null, startedAt: null, exercises: [], restTimer: initialRestTimer }),

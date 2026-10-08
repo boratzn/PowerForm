@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import {
   cloneTemplateToUserProgram,
+  createProgramFromPastSession as dbCreateProgramFromPastSession,
   getActiveProgram,
   getProgramById,
   getTemplatePrograms,
@@ -27,6 +28,10 @@ type ProgramState = {
   setSelectedDayIndex: (index: number) => void;
   activateProgram: (programClientUuid: string) => Promise<void>;
   cloneAndActivateTemplate: (templateClientUuid: string) => Promise<string>;
+  createProgramFromPastSession: (
+    sessionClientUuid: string,
+    options?: { name?: string; setActive?: boolean; goal?: any }
+  ) => Promise<string>;
 };
 
 export const useProgramStore = create<ProgramState>((set, get) => ({
@@ -96,6 +101,22 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
       const newUuid = await cloneTemplateToUserProgram(templateClientUuid, userId, true);
       await Promise.all([get().loadActiveProgram(), get().loadUserPrograms()]);
       return newUuid;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  createProgramFromPastSession: async (sessionClientUuid, options) => {
+    const userId = useAuthStore.getState().session?.user.id;
+    if (!userId) throw new Error('Oturum açık değil');
+    set({ isLoading: true });
+    try {
+      const res = await dbCreateProgramFromPastSession(sessionClientUuid, userId, options);
+      if (!res.success || !res.programId) {
+        throw new Error(res.message);
+      }
+      await Promise.all([get().loadActiveProgram(), get().loadUserPrograms()]);
+      return res.programId;
     } finally {
       set({ isLoading: false });
     }

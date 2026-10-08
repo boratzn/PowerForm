@@ -192,6 +192,27 @@ export default function WeightTrendScreen() {
             </View>
           </Card>
 
+          {/* Gelecekteki Sen (90 Gün Projeksiyonu) Banner */}
+          <Pressable
+            onPress={() => router.push('/future-simulation')}
+            className="flex-row items-center justify-between p-3.5 rounded-2xl bg-bg-surface border border-accent/30 active:opacity-80"
+          >
+            <View className="flex-row items-center gap-2.5">
+              <View className="h-8 w-8 rounded-xl bg-accent/20 items-center justify-center">
+                <Text className="text-sm">🔮</Text>
+              </View>
+              <View>
+                <Text className="text-xs font-bold text-accent">
+                  90 Günlük Gelecek Projeksiyonu
+                </Text>
+                <Text className="text-[10px] text-text-muted">
+                  Mevcut trendine göre 3 ay sonra nerede olacaksın?
+                </Text>
+              </View>
+            </View>
+            <Text className="text-xs font-bold text-accent">Simüle Et ➔</Text>
+          </Pressable>
+
           {/* Kilo Girişi Formu */}
           <Card className="gap-sm">
             <Text className="text-xs uppercase font-bold text-text-muted">{t('todays_weight_label')}</Text>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -77,6 +77,7 @@ const SUGGESTED_PROMPTS: Record<string, string[]> = {
 
 export default function CoachScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const language = useLanguageStore((s) => s.language);
   const t = useLanguageStore((s) => s.t);
 
@@ -663,27 +664,65 @@ export default function CoachScreen() {
             {loadingData ? (
               <ActivityIndicator color={colors.accent} />
             ) : (
-              <View className="flex-row gap-xs justify-between">
-                <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
-                  <Text className="text-base font-bold text-text-primary">{totalSessions}</Text>
-                  <Text className="text-[10px] text-text-muted">{t('sessions_short')}</Text>
+              <View className="gap-xs">
+                <View className="flex-row gap-xs justify-between">
+                  <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
+                    <Text className="text-base font-bold text-text-primary">{totalSessions}</Text>
+                    <Text className="text-[10px] text-text-muted">{t('sessions_short')}</Text>
+                  </View>
+                  <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
+                    <Text className="text-base font-bold text-[#38BDF8]">+{progressingCount}</Text>
+                    <Text className="text-[10px] text-text-muted">{t('progressing_label')}</Text>
+                  </View>
+                  <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
+                    <Text className="text-base font-bold text-[#FBBF24]">{plateauCount}</Text>
+                    <Text className="text-[10px] text-text-muted">{t('plateau_label')}</Text>
+                  </View>
+                  <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
+                    <Text className="text-base font-bold text-accent">
+                      {weeklyData?.weightSummary.weeklyChangeKg !== null
+                        ? `${weeklyData?.weightSummary.weeklyChangeKg} kg`
+                        : '—'}
+                    </Text>
+                    <Text className="text-[10px] text-text-muted">{t('weight_change_label')}</Text>
+                  </View>
                 </View>
-                <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
-                  <Text className="text-base font-bold text-[#38BDF8]">+{progressingCount}</Text>
-                  <Text className="text-[10px] text-text-muted">{t('progressing_label')}</Text>
-                </View>
-                <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
-                  <Text className="text-base font-bold text-[#FBBF24]">{plateauCount}</Text>
-                  <Text className="text-[10px] text-text-muted">{t('plateau_label')}</Text>
-                </View>
-                <View className="flex-1 items-center rounded-xl bg-bg-elevated p-sm border border-bg-surface">
-                  <Text className="text-base font-bold text-accent">
-                    {weeklyData?.weightSummary.weeklyChangeKg !== null
-                      ? `${weeklyData?.weightSummary.weeklyChangeKg} kg`
-                      : '—'}
-                  </Text>
-                  <Text className="text-[10px] text-text-muted">{t('weight_change_label')}</Text>
-                </View>
+
+                {/* Uyku & Toparlanma Durumu */}
+                <Pressable
+                  onPress={() => router.push('/sleep-tracker')}
+                  className="flex-row items-center justify-between rounded-xl bg-bg-elevated p-sm px-md border border-white/5 active:opacity-75"
+                >
+                  <View className="flex-row items-center gap-xs">
+                    <Ionicons name="moon" size={14} color="#818CF8" />
+                    <Text className="text-xs text-text-muted">{t('weekly_sleep_label')}</Text>
+                    <Text className="text-xs font-bold text-text-primary">
+                      {weeklyData?.sleepSummary?.avgDurationHours
+                        ? `${weeklyData.sleepSummary.avgDurationHours} ${t('hrs_per_day')}`
+                        : t('awaiting_records')}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Text className="text-[11px] font-semibold text-[#818CF8]">{t('sleep_tracking_title')}</Text>
+                    <Ionicons name="chevron-forward" size={12} color="#818CF8" />
+                  </View>
+                </Pressable>
+
+                {/* Gelecekteki Sen (90 Gün Projeksiyonu) Kısayolu */}
+                <Pressable
+                  onPress={() => router.push('/future-simulation')}
+                  className="flex-row items-center justify-between rounded-xl bg-accent/10 p-sm px-md border border-accent/20 active:opacity-75"
+                >
+                  <View className="flex-row items-center gap-xs">
+                    <Ionicons name="sparkles" size={14} color={colors.accent} />
+                    <Text className="text-xs font-bold text-accent">
+                      🔮 {t('future_sim_tool_title')}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Text className="text-[11px] font-semibold text-accent">90 Gün ➔</Text>
+                  </View>
+                </Pressable>
               </View>
             )}
 
