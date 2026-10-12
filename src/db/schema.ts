@@ -317,3 +317,44 @@ export const sleepLogs = sqliteTable('sleep_logs', {
     .default(sql`(unixepoch())`),
 });
 
+// Günlük Su Tüketimi (Water Logs - Item 2)
+export const waterLogs = sqliteTable(
+  'water_logs',
+  {
+    clientUuid: text('client_uuid').primaryKey(),
+    userId: text('user_id').notNull(),
+    date: text('date').notNull(), // 'YYYY-MM-DD'
+    amountMl: integer('amount_ml').notNull().default(0),
+    targetMl: integer('target_ml').notNull().default(2500),
+    createdAt: integer('created_at')
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at')
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [unique().on(t.userId, t.date)]
+);
+
+// Vücut Fotoğrafları ve Form Takibi (Body Photos - Item 6 & Daily update)
+export const bodyPhotos = sqliteTable('body_photos', {
+  clientUuid: text('client_uuid').primaryKey(),
+  userId: text('user_id').notNull(),
+  photoUri: text('photo_uri').notNull(),
+  photoBase64: text('photo_base64'),
+  photoType: text('photo_type', { enum: ['front', 'side', 'back', 'other'] })
+    .notNull()
+    .default('front'),
+  periodType: text('period_type', { enum: ['daily', 'weekly', 'monthly'] })
+    .notNull()
+    .default('daily'),
+  date: text('date').notNull(), // 'YYYY-MM-DD'
+  time: text('time'), // 'HH:mm' e.g. '15:48'
+  weightKg: real('weight_kg'),
+  notes: text('notes'),
+  createdAt: integer('created_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+

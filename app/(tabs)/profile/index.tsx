@@ -239,26 +239,13 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View className="flex-row items-center gap-2">
-          <Pressable
-            hitSlop={8}
-            onPress={() => setToolsSheetVisible(true)}
-            className="flex-row items-center gap-1 rounded-full bg-accent/15 px-3 py-1.5 border border-accent/40 active:opacity-70"
-          >
-            <Ionicons name="flash" size={13} color={colors.accent} />
-            <Text className="text-xs font-bold text-accent">
-              {language === 'tr' ? 'Araçlar' : language === 'de' ? 'Tools' : language === 'es' ? 'Herramientas' : 'Tools'}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            hitSlop={8}
-            onPress={() => router.push('/edit-profile')}
-            className="rounded-full bg-bg-surface px-3 py-1.5 border border-bg-elevated active:opacity-70"
-          >
-            <Text className="text-xs font-semibold text-text-primary">{t('edit')}</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          hitSlop={8}
+          onPress={() => router.push('/edit-profile')}
+          className="rounded-full bg-bg-surface px-3 py-1.5 border border-bg-elevated active:opacity-70"
+        >
+          <Text className="text-xs font-semibold text-text-primary">{t('edit')}</Text>
+        </Pressable>
       </View>
 
       {/* Üyelik & Plan Kartı */}

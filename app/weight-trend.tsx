@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Input, ModernConfirmModal } from '../src/components/ui';
+import { ModernBmiCard } from '../src/components/bmi/ModernBmiCard';
 import { colors } from '../src/constants/theme';
 import {
   deleteBodyWeightLog,
@@ -133,16 +134,22 @@ export default function WeightTrendScreen() {
           </Pressable>
         </View>
 
-        {/* Sekme Geçişi: Kilo Takibi <-> Vücut Ölçüleri */}
+        {/* Sekme Geçişi: Kilo Takibi <-> Vücut Ölçüleri <-> Form Fotoğrafları */}
         <View className="flex-row rounded-xl bg-bg-card p-1 mb-md border border-white/5">
           <Pressable className="flex-1 py-2 items-center rounded-lg bg-bg-elevated shadow-sm border border-accent/20">
-            <Text className="text-xs font-bold text-accent">{t('weight_tracking_header')}</Text>
+            <Text className="text-[11px] font-bold text-accent">{t('weight_tracking_header')}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.replace('/body-measurements')}
             className="flex-1 py-2 items-center rounded-lg active:opacity-70"
           >
-            <Text className="text-xs font-semibold text-text-muted">{t('body_measurements_title')}</Text>
+            <Text className="text-[11px] font-semibold text-text-muted">{t('body_measurements_title')}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.replace('/body-photos')}
+            className="flex-1 py-2 items-center rounded-lg active:opacity-70"
+          >
+            <Text className="text-[11px] font-semibold text-text-muted">{t('tab_body_photos')}</Text>
           </Pressable>
         </View>
 
@@ -358,6 +365,9 @@ export default function WeightTrendScreen() {
               </View>
             )}
           </Card>
+
+          {/* Modern BMI Grafiği (Item 1) */}
+          <ModernBmiCard currentWeightKg={trend?.currentWeight} />
 
           {/* Geçmiş Kilo Kayıtları Listesi */}
           {trend && trend.points.filter((p) => p.weightKg != null).length > 0 && (

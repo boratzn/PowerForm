@@ -70,6 +70,18 @@ export function ToolsHubSheet({ visible, onClose }: ToolsHubSheetProps) {
       route: '/sleep-tracker',
     },
     {
+      id: 'body-photos',
+      titleKey: 'body_photos_tool_title',
+      defaultTitle: 'Vücut Form Takibi',
+      descKey: 'body_photos_tool_desc',
+      defaultDesc: 'Günlük form takibi & AI analizi',
+      iconName: 'camera-outline',
+      iconColor: '#38BDF8',
+      badge: 'YENİ',
+      badgeColor: '#38BDF8',
+      route: '/body-photos',
+    },
+    {
       id: 'transformation-card',
       titleKey: 'transformation_card_tool_title',
       defaultTitle: 'Dönüşüm Kartı',
@@ -147,8 +159,10 @@ export function ToolsHubSheet({ visible, onClose }: ToolsHubSheetProps) {
   };
 
   const renderToolGridItem = (item: ToolItem) => {
-    const title = t(item.titleKey as any) || item.defaultTitle;
-    const desc = t(item.descKey as any) || item.defaultDesc;
+    const rawTitle = t(item.titleKey as any);
+    const title = rawTitle && rawTitle !== item.titleKey ? rawTitle : item.defaultTitle;
+    const rawDesc = t(item.descKey as any);
+    const desc = rawDesc && rawDesc !== item.descKey ? rawDesc : item.defaultDesc;
 
     return (
       <Pressable
@@ -178,7 +192,7 @@ export function ToolsHubSheet({ visible, onClose }: ToolsHubSheetProps) {
                 className="text-[9px] font-extrabold tracking-wider"
                 style={{ color: item.badgeColor || item.iconColor }}
               >
-                {item.badge}
+                {item.badge === 'YENİ' ? t('new_badge') : item.badge}
               </Text>
             </View>
           )}

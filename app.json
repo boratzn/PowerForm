@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.powerform.app",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#0B0F14",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -38,6 +38,16 @@
       "expo-image",
       "expo-localization",
       "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable\n-renamesourcefileattribute SourceFile\n-keep class com.facebook.react.turbomodule.** { *; }\n-keep class com.swmansion.reanimated.** { *; }\n-keep class com.swmansion.gesturehandler.** { *; }\n-keep class com.swmansion.rnscreens.** { *; }\n-keep class com.swmansion.worklets.** { *; }\n-keep class expo.modules.** { *; }\n-keep class * extends expo.modules.core.interfaces.Package { *; }\n-keep class * extends expo.modules.kotlin.modules.Module { *; }\n-keep public class * implements com.bumptech.glide.module.GlideModule\n-keep class io.requery.android.database.sqlite.** { *; }\n-keep public class com.google.android.gms.ads.** { public *; }\n-keep class io.invertase.googlemobileads.** { *; }\n-keep class com.revenuecat.purchases.** { *; }\n-keep class com.android.billingclient.** { *; }\n-keep class com.reactnativecommunity.asyncstorage.** { *; }\n-keep class com.horcrux.svg.** { *; }\n-keep class fr.greweb.reactnativeviewshot.** { *; }\n-dontwarn com.facebook.react.**\n-dontwarn com.swmansion.**\n-dontwarn expo.modules.**\n-dontwarn com.bumptech.glide.**\n-dontwarn com.google.android.gms.ads.**\n-dontwarn com.revenuecat.purchases.**\n-dontwarn com.android.billingclient.**\n-dontwarn okhttp3.**\n-dontwarn okio.**"
+          }
+        }
+      ],
       [
         "react-native-google-mobile-ads",
         {

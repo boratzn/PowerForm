@@ -155,6 +155,7 @@ export default function RootLayout() {
             <Stack.Screen name="sleep-tracker" options={{ presentation: 'modal' }} />
             <Stack.Screen name="future-simulation" options={{ presentation: 'modal' }} />
             <Stack.Screen name="transformation-card" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="body-photos" options={{ presentation: 'modal' }} />
             <Stack.Screen name="legal" options={{ presentation: 'modal' }} />
             <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
             <Stack.Screen name="personal-records" options={{ presentation: 'modal' }} />

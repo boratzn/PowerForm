@@ -14,6 +14,7 @@ type SetRowProps = {
   onFieldPress: (field: ActiveField) => void;
   onToggleComplete: () => void;
   onLongPress: () => void;
+  onDelete?: () => void;
 };
 
 function FieldChip({ value, isActive, onPress, width = 54 }: { value: string; isActive: boolean; onPress: () => void; width?: number }) {
@@ -34,7 +35,7 @@ function FieldChip({ value, isActive, onPress, width = 54 }: { value: string; is
 
 // Satır düzeni FITNESS_APP_SPEC.md §10.2'deki ASCII diyagramla birebir:
 // SET | ÖNCEKİ | KG | TEKRAR | RIR | ✓ — tüm dokunma hedefleri min 48dp (kural 2).
-export function SetRow({ set, pastLabel, activeField, onFieldPress, onToggleComplete, onLongPress }: SetRowProps) {
+export function SetRow({ set, pastLabel, activeField, onFieldPress, onToggleComplete, onLongPress, onDelete }: SetRowProps) {
   return (
     <Pressable onLongPress={onLongPress} delayLongPress={400}>
       <View className="relative flex-row items-center gap-1.5 py-1">
@@ -66,7 +67,7 @@ export function SetRow({ set, pastLabel, activeField, onFieldPress, onToggleComp
           width={38}
         />
 
-        <View className="flex-1 items-center justify-center">
+        <View className="flex-1 flex-row items-center justify-end gap-1">
           <Pressable
             onPress={onToggleComplete}
             disabled={set.reps == null}
@@ -107,6 +108,16 @@ export function SetRow({ set, pastLabel, activeField, onFieldPress, onToggleComp
               }
             />
           </Pressable>
+
+          {onDelete && (
+            <Pressable
+              onPress={onDelete}
+              hitSlop={8}
+              className="h-9 w-7 items-center justify-center rounded-lg active:opacity-60"
+            >
+              <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
+            </Pressable>
+          )}
         </View>
       </View>
     </Pressable>

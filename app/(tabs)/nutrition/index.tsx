@@ -15,6 +15,7 @@ import { EditFoodEntryModal } from '../../../src/components/nutrition/EditFoodEn
 import { FoodPickerSheet } from '../../../src/components/nutrition/FoodPickerSheet';
 import { FoodVisionModal } from '../../../src/components/nutrition/FoodVisionModal';
 import { TargetEditorModal } from '../../../src/components/nutrition/TargetEditorModal';
+import { WaterTrackerWidget } from '../../../src/components/water/WaterTrackerWidget';
 import { Button, Card, StatusModal } from '../../../src/components/ui';
 import { colors } from '../../../src/constants/theme';
 import type { NutritionEntryItem } from '../../../src/db/nutrition';
@@ -382,6 +383,9 @@ export default function NutritionScreen() {
                 </View>
               </View>
             </Card>
+
+            {/* Günlük Su Takibi (Item 2) */}
+            <WaterTrackerWidget date={selectedDate} />
 
             {/* 4 Öğün Listesi */}
             <View className="gap-md">

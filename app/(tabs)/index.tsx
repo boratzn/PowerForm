@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card } from '../../src/components/ui';
 import { MuscleGroupBars, StatPill, WeightQuickEntry } from '../../src/components/today';
+import { WaterTrackerWidget } from '../../src/components/water/WaterTrackerWidget';
 import { ToolsHubSheet } from '../../src/components/profile/ToolsHubSheet';
 import { getRecentBodyWeights, getTodayBodyWeight, logBodyWeight, type BodyWeightLog } from '../../src/db/bodyWeight';
 import {
@@ -364,6 +365,9 @@ export default function TodayScreen() {
           </View>
         </Card>
       </Pressable>
+
+      {/* Günlük Su Takibi (Item 2) */}
+      <WaterTrackerWidget />
     </ScrollView>
       <ToolsHubSheet
         visible={toolsSheetVisible}

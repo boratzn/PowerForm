@@ -5,6 +5,8 @@ export type CheckInAnswers = {
   jointPainOrFatigue: 'none' | 'mild' | 'severe';
   nutritionAdherence: 'low' | 'medium' | 'high';
   userNotes?: string;
+  photoUri?: string;
+  photoBase64?: string;
 };
 
 export type ChatMessage = {
@@ -148,6 +150,10 @@ Analiz Kuralları:
 }
 \`\`\``;
 
+  const photoGuidance = checkIn.photoBase64
+    ? `\n9. GÖRSEL FORM ANALİZİ (ÇOK ÖNEMLİ): Kullanıcı bu haftaki fiziksel vücut form fotoğrafını da yükledi. Bu görseli incele; kas belirginliğini, simetrisini, duruşunu (postür) ve tahmini form gelişimini bilimsel ve motive edici şekilde değerlendir. Raporunda '📸 **Görsel Form & Vücut Kompozisyonu Analizi**' başlığı altında sun.`
+    : '';
+
   const userContext = JSON.stringify(
     {
       weeklyData,
@@ -156,19 +162,31 @@ Analiz Kuralları:
         jointPainOrFatigue: checkIn.jointPainOrFatigue,
         nutritionAdherence: checkIn.nutritionAdherence,
         userNotes: checkIn.userNotes || 'Belirtilmedi',
+        hasProgressPhoto: !!checkIn.photoBase64,
       },
     },
     null,
     2
   );
 
+  const parts: any[] = [
+    { text: `${systemPrompt}${photoGuidance}\n\nİşte kullanıcının bu haftaki gerçek verileri:\n${userContext}` },
+  ];
+
+  if (checkIn.photoBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: checkIn.photoBase64,
+      },
+    });
+  }
+
   const payload = {
     contents: [
       {
         role: 'user',
-        parts: [
-          { text: `${systemPrompt}\n\nİşte kullanıcının bu haftaki gerçek verileri:\n${userContext}` },
-        ],
+        parts,
       },
     ],
     generationConfig: {

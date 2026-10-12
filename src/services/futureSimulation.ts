@@ -23,7 +23,19 @@ export type MilestoneItem = {
   highlightText: string;
 };
 
+export type SimulationCustomParams = {
+  startingWeightKg?: number;
+  targetWeightKg?: number;
+  goal?: 'hypertrophy' | 'strength' | 'fat_loss' | 'recomp' | 'general_health';
+  experience?: 'beginner' | 'intermediate' | 'advanced';
+  trainingDaysPerWeek?: number;
+  adherence?: AdherenceLevel;
+  caloricPace?: 'conservative' | 'moderate' | 'aggressive';
+};
+
 export type SimulationResult = {
+  isCustomized?: boolean;
+  customParams?: SimulationCustomParams;
   currentStats: {
     weightKg: number;
     bodyFatPct: number;
@@ -58,26 +70,35 @@ export type SimulationResult = {
 };
 
 /**
- * Runs the 90-day Future You projection simulation based on user's real logs and profile
+ * Runs the 90-day Future You projection simulation based on user's real logs and profile (or custom edits)
  */
 export async function runFutureSimulation(
   userId: string,
   profile: any,
-  adherence: AdherenceLevel = 0.85
+  adherence: AdherenceLevel = 0.85,
+  customParams?: SimulationCustomParams,
+  lang: string = 'tr'
 ): Promise<SimulationResult> {
-  // 1. Fetch latest weight logs
-  let latestWeight = 78.0;
-  const recentWeights = await db
-    .select()
-    .from(bodyWeightLogs)
-    .where(eq(bodyWeightLogs.userId, userId))
-    .orderBy(desc(bodyWeightLogs.loggedOn))
-    .limit(14);
+  const effectiveAdherence = customParams?.adherence ?? adherence;
+  const l = (lang || 'tr').toLowerCase();
 
-  if (recentWeights.length > 0) {
-    latestWeight = recentWeights[0].weightKg;
-  } else if (profile?.weight_kg) {
-    latestWeight = Number(profile.weight_kg);
+  // 1. Fetch latest weight logs or use custom starting weight
+  let latestWeight = 78.0;
+  if (customParams?.startingWeightKg && customParams.startingWeightKg > 20) {
+    latestWeight = customParams.startingWeightKg;
+  } else {
+    const recentWeights = await db
+      .select()
+      .from(bodyWeightLogs)
+      .where(eq(bodyWeightLogs.userId, userId))
+      .orderBy(desc(bodyWeightLogs.loggedOn))
+      .limit(14);
+
+    if (recentWeights.length > 0) {
+      latestWeight = recentWeights[0].weightKg;
+    } else if (profile?.weight_kg) {
+      latestWeight = Number(profile.weight_kg);
+    }
   }
 
   // 2. Fetch latest body measurements
@@ -117,47 +138,75 @@ export async function runFutureSimulation(
   const initialLeanMass = Number((latestWeight * (1 - initialBf / 100)).toFixed(1));
 
   // 4. Compute 90-day trajectory based on primary goal and adherence
-  const goal = profile?.primary_goal || 'hypertrophy';
-  const experience = profile?.experience || 'intermediate';
+  const goal = customParams?.goal || profile?.primary_goal || 'hypertrophy';
+  const experience = customParams?.experience || profile?.experience || 'intermediate';
 
   // Experience multiplier for hypertrophy potential
   const expGainFactor = experience === 'beginner' ? 1.4 : experience === 'advanced' ? 0.6 : 1.0;
+
+  // Caloric pace modifier (Agresif, Dengeli, Muhafazakar)
+  const paceFactor =
+    customParams?.caloricPace === 'aggressive'
+      ? 1.25
+      : customParams?.caloricPace === 'conservative'
+        ? 0.8
+        : 1.0;
 
   // Goal-driven 90-day parameters (at 100% adherence)
   let targetTotalWeightDelta = 0;
   let targetLeanMassDelta = 0;
   let targetFatMassDelta = 0;
 
-  if (goal === 'fat_loss') {
+  if (customParams?.targetWeightKg && customParams.targetWeightKg > 20) {
+    // Doğrudan hedef kilo verilmişse delta'yı kullanıcı hedefine göre hesapla
+    const desiredDelta = Number((customParams.targetWeightKg - latestWeight).toFixed(1));
+    targetTotalWeightDelta = desiredDelta;
+
+    if (desiredDelta < 0) {
+      // Kilo verme: ~85% yağ yakımı, ~15% su/kas dengesi
+      targetFatMassDelta = Number((desiredDelta * 0.85).toFixed(1));
+      targetLeanMassDelta = Number((desiredDelta * 0.15).toFixed(1));
+    } else if (desiredDelta > 0) {
+      // Kilo alma: Hedefe ve seviyeye göre kas kütlesi ve yağ ayrışımı
+      const leanRatio = goal === 'hypertrophy' || goal === 'strength' ? 0.68 : 0.55;
+      targetLeanMassDelta = Number((desiredDelta * leanRatio).toFixed(1));
+      targetFatMassDelta = Number((desiredDelta * (1 - leanRatio)).toFixed(1));
+    } else {
+      // Kilo koruma / Vücut kompozisyonu dönüşümü (Recomp)
+      targetFatMassDelta = Number((-2.5 * paceFactor).toFixed(1));
+      targetLeanMassDelta = Number((2.5 * expGainFactor).toFixed(1));
+      targetTotalWeightDelta = 0;
+    }
+  } else if (goal === 'fat_loss') {
     // Healthy deficit: ~0.55 kg fat loss / week at 100%
-    targetFatMassDelta = -7.0;
+    targetFatMassDelta = -7.0 * paceFactor;
     targetLeanMassDelta = 0.5 * expGainFactor; // slight muscle gain/preservation
     targetTotalWeightDelta = targetFatMassDelta + targetLeanMassDelta; // ~ -6.5 kg
   } else if (goal === 'hypertrophy') {
     // Lean surplus: ~1.5 - 2.5 kg muscle gain over 90 days + minor fat
-    targetLeanMassDelta = 2.4 * expGainFactor;
-    targetFatMassDelta = 0.8;
+    targetLeanMassDelta = 2.4 * expGainFactor * paceFactor;
+    targetFatMassDelta = 0.8 * paceFactor;
     targetTotalWeightDelta = targetLeanMassDelta + targetFatMassDelta; // ~ +3.2 kg
   } else if (goal === 'recomp') {
     // Body recomposition: lose fat while building muscle
-    targetFatMassDelta = -4.0;
+    targetFatMassDelta = -4.0 * paceFactor;
     targetLeanMassDelta = 2.0 * expGainFactor;
     targetTotalWeightDelta = targetFatMassDelta + targetLeanMassDelta; // ~ -2.0 kg
   } else if (goal === 'strength') {
-    targetLeanMassDelta = 1.8 * expGainFactor;
+    targetLeanMassDelta = 1.8 * expGainFactor * paceFactor;
     targetFatMassDelta = -1.0;
     targetTotalWeightDelta = targetLeanMassDelta + targetFatMassDelta; // ~ +0.8 kg
   } else {
     // general_health
-    targetFatMassDelta = -3.0;
+    targetFatMassDelta = -3.0 * paceFactor;
     targetLeanMassDelta = 1.2 * expGainFactor;
     targetTotalWeightDelta = targetFatMassDelta + targetLeanMassDelta; // ~ -1.8 kg
   }
 
-  // Scale with adherence factor
-  const scaledTotalWeightDelta = Number((targetTotalWeightDelta * adherence).toFixed(1));
-  const scaledLeanMassDelta = Number((targetLeanMassDelta * adherence).toFixed(1));
-  const scaledFatMassDelta = Number((targetFatMassDelta * adherence).toFixed(1));
+  // Scale with effective adherence factor
+  const scaledTotalWeightDelta = Number((targetTotalWeightDelta * effectiveAdherence).toFixed(1));
+  const scaledLeanMassDelta = Number((targetLeanMassDelta * effectiveAdherence).toFixed(1));
+  const scaledFatMassDelta = Number((targetFatMassDelta * effectiveAdherence).toFixed(1));
 
   // Trajectory points: Day 0, 15, 30, 45, 60, 75, 90
   const days = [0, 15, 30, 45, 60, 75, 90];
@@ -210,32 +259,36 @@ export async function runFutureSimulation(
   const day30Point = trajectoryPoints[2];
   const day60Point = trajectoryPoints[4];
 
+  const fatLabel = l === 'tr' ? 'Yağ' : l === 'de' ? 'KFA' : l === 'es' ? 'Grasa' : 'Fat';
+  const waistLabel = l === 'tr' ? 'Bel' : l === 'de' ? 'Taille' : l === 'es' ? 'Cintura' : 'Waist';
+  const armLabel = l === 'tr' ? 'Kol' : l === 'de' ? 'Arm' : l === 'es' ? 'Brazo' : 'Arm';
+
   const milestones: MilestoneItem[] = [
     {
       day: 30,
       titleKey: 'milestone_day_30_title',
       descKey: 'milestone_day_30_desc',
       weightDelta: Number((day30Point.weightKg - latestWeight).toFixed(1)),
-      highlightText: `${day30Point.weightKg} kg · %${day30Point.bodyFatPct} Yağ`,
+      highlightText: `${day30Point.weightKg} kg · %${day30Point.bodyFatPct} ${fatLabel}`,
     },
     {
       day: 60,
       titleKey: 'milestone_day_60_title',
       descKey: 'milestone_day_60_desc',
       weightDelta: Number((day60Point.weightKg - latestWeight).toFixed(1)),
-      highlightText: `${day60Point.weightKg} kg · Bel: ${day60Point.waistCm} cm`,
+      highlightText: `${day60Point.weightKg} kg · ${waistLabel}: ${day60Point.waistCm} cm`,
     },
     {
       day: 90,
       titleKey: 'milestone_day_90_title',
       descKey: 'milestone_day_90_desc',
       weightDelta: deltas.weightKg,
-      highlightText: `${finalPoint.weightKg} kg · Kol: ${finalPoint.armCm} cm`,
+      highlightText: `${finalPoint.weightKg} kg · ${armLabel}: ${finalPoint.armCm} cm`,
     },
   ];
 
-  // Scientific insights
-  const scientificInsights = {
+  // Scientific insights localized
+  let scientificInsights = {
     title: 'Bilimsel Hipertrofi & Yağ Oksidasyonu Analizi',
     description: `Mevcut antrenman hacminiz ve hedeflenen beslenme dengeniz doğrultusunda 90 günlük fizyolojik adaptasyonunuz:`,
     bulletPoints: [
@@ -246,7 +299,44 @@ export async function runFutureSimulation(
     ],
   };
 
+  if (l === 'en') {
+    scientificInsights = {
+      title: 'Scientific Hypertrophy & Fat Oxidation Analysis',
+      description: 'Based on your current workout volume and targeted nutrition, your 90-day physiological adaptations:',
+      bulletPoints: [
+        `Muscle Protein Synthesis (MPS): With optimal protein (~2g/kg/day), approximately +${Math.max(0.4, deltas.leanMassKg)} kg of lean muscle mass is projected over 90 days.`,
+        `Waist & Visceral Fat Reduction: Estimated ${deltas.waistCm < 0 ? `${Math.abs(deltas.waistCm)} cm reduction` : `${deltas.waistCm} cm change`} in waist circumference.`,
+        `Strength & Neuromuscular Adaptation: Anticipated 12% - 18% progressive overload increase in compound lifts (Squat, Bench, Deadlift).`,
+        `Metabolic Flexibility: 12 weeks of structured consistency optimizes insulin sensitivity and resting metabolic rate (RMR).`,
+      ],
+    };
+  } else if (l === 'de') {
+    scientificInsights = {
+      title: 'Wissenschaftliche Hypertrophie- & Fettverbrennungsanalyse',
+      description: 'Basierend auf deinem Trainingsvolumen und deiner Zielernährung ergibt sich folgende 90-Tage-Anpassung:',
+      bulletPoints: [
+        `Muskelproteinsynthese (MPS): Mit ausreichend Protein (~2g/kg/Tag) wird ein Zuwachs von ca. +${Math.max(0.4, deltas.leanMassKg)} kg magerer Muskelmasse prognostiziert.`,
+        `Taillen- & Viszeralfettreduktion: Voraussichtlich ${deltas.waistCm < 0 ? `${Math.abs(deltas.waistCm)} cm Reduktion` : `${deltas.waistCm} cm Veränderung`} des Taillenumfangs.`,
+        `Kraft & neuromuskuläre Anpassung: Voraussichtlich 12 % - 18 % Steigerung des progressive overload bei Grundübungen.`,
+        `Metabolische Flexibilität: 12 Wochen Beständigkeit optimieren die Insulinsensitivität und den Grundumsatz (RMR).`,
+      ],
+    };
+  } else if (l === 'es') {
+    scientificInsights = {
+      title: 'Análisis Científico de Hipertrofia y Oxidación de Grasas',
+      description: 'Según tu volumen de entrenamiento actual y nutrición objetivo, tu adaptación fisiológica a 90 días:',
+      bulletPoints: [
+        `Síntesis Proteica Muscular (MPS): Con proteína adecuada (~2g/kg/día), se proyectan aproximadamente +${Math.max(0.4, deltas.leanMassKg)} kg de masa muscular magra en 90 días.`,
+        `Reducción de Cintura y Grasa Visceral: Reducción estimada de ${deltas.waistCm < 0 ? `${Math.abs(deltas.waistCm)} cm` : `${deltas.waistCm} cm de cambio`} en el perímetro de cintura.`,
+        `Fuerza y Adaptación Neuromuscular: Se proyecta un incremento del 12% al 18% de sobrecarga progresiva en levantamientos compuestos.`,
+        `Flexibilidad Metabólica: 12 semanas de constancia optimizan la sensibilidad a la insulina y la tasa metabólica basal (RMR).`,
+      ],
+    };
+  }
+
   return {
+    isCustomized: !!customParams && Object.keys(customParams).length > 0,
+    customParams,
     currentStats: {
       weightKg: latestWeight,
       bodyFatPct: initialBf,

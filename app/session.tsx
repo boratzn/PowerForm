@@ -296,6 +296,7 @@ export default function SessionScreen() {
               onFieldPress={(setClientUuid, field) => handleFieldPress(ex.clientUuid, setClientUuid, field)}
               onToggleComplete={(setClientUuid) => handleToggleComplete(ex.clientUuid, setClientUuid)}
               onLongPressSet={(setClientUuid) => handleLongPressSet(ex.clientUuid, setClientUuid)}
+              onDeleteSet={(setClientUuid) => handleLongPressSet(ex.clientUuid, setClientUuid)}
               onAddSet={() => addSet(ex.clientUuid)}
               onRemoveExercise={() => removeExercise(ex.clientUuid)}
               onUpdateNotes={(notes) => updateExerciseNotes(ex.clientUuid, notes)}

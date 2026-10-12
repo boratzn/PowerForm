@@ -17,6 +17,7 @@ type ExerciseCardProps = {
   onFieldPress: (setClientUuid: string, field: ActiveField) => void;
   onToggleComplete: (setClientUuid: string) => void;
   onLongPressSet: (setClientUuid: string) => void;
+  onDeleteSet?: (setClientUuid: string) => void;
   onAddSet: () => void;
   onRemoveExercise: () => void;
   onUpdateNotes?: (notes: string) => void;
@@ -35,6 +36,7 @@ export function ExerciseCard({
   onFieldPress,
   onToggleComplete,
   onLongPressSet,
+  onDeleteSet,
   onAddSet,
   onRemoveExercise,
   onUpdateNotes,
@@ -137,13 +139,33 @@ export function ExerciseCard({
             onFieldPress={(field) => onFieldPress(s.clientUuid, field)}
             onToggleComplete={() => onToggleComplete(s.clientUuid)}
             onLongPress={() => onLongPressSet(s.clientUuid)}
+            onDelete={onDeleteSet ? () => onDeleteSet(s.clientUuid) : undefined}
           />
         ))}
       </View>
 
-      <Pressable onPress={onAddSet} className="mt-xs min-h-[48px] items-center justify-center rounded-input bg-bg-elevated active:opacity-70">
-        <Text className="text-sm font-medium text-text-primary">{t('add_set')}</Text>
-      </Pressable>
+      <View className="mt-xs flex-row items-center gap-xs">
+        <Pressable
+          onPress={onAddSet}
+          className="flex-1 min-h-[46px] items-center justify-center rounded-input bg-bg-elevated active:opacity-70 flex-row gap-1.5"
+        >
+          <Ionicons name="add" size={18} color={colors.textPrimary} />
+          <Text className="text-sm font-medium text-text-primary">{t('add_set')}</Text>
+        </Pressable>
+
+        {exercise.sets.length > 0 && onDeleteSet && (
+          <Pressable
+            onPress={() => {
+              const lastSet = exercise.sets[exercise.sets.length - 1];
+              if (lastSet) onDeleteSet(lastSet.clientUuid);
+            }}
+            className="min-h-[46px] px-3.5 items-center justify-center rounded-input bg-danger/10 border border-danger/30 active:opacity-70 flex-row gap-1"
+          >
+            <Ionicons name="trash-outline" size={15} color={colors.danger} />
+            <Text className="text-xs font-semibold text-danger">{t('delete_set')}</Text>
+          </Pressable>
+        )}
+      </View>
 
       <ModernConfirmModal
         visible={removeConfirmVisible}

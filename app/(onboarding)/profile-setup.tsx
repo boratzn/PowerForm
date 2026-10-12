@@ -30,6 +30,7 @@ import {
 import { logBodyWeight } from '../../src/db/bodyWeight';
 import { saveNutritionTargets } from '../../src/db/nutrition';
 import { calculateTdeeAndMacros } from '../../src/lib/nutritionCalculations';
+import { ModernBmiCard } from '../../src/components/bmi/ModernBmiCard';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 import type { Database } from '../../src/types/database';
@@ -406,29 +407,13 @@ export default function ProfileSetupScreen() {
                 </View>
               </View>
 
-              {/* Canlı BMI Göstergesi */}
-              <View style={styles.bmiCard}>
-                <View style={styles.bmiHeaderRow}>
-                  <View style={styles.bmiTitleGroup}>
-                    <Ionicons name="speedometer-outline" size={18} color={bmiInfo.color} />
-                    <Text style={styles.bmiTitle}>Vücut Kitle İndeksi (BMI)</Text>
-                  </View>
-                  <View style={[styles.bmiPill, { backgroundColor: `${bmiInfo.color}20` }]}>
-                    <Text style={[styles.bmiPillText, { color: bmiInfo.color }]}>
-                      {bmiInfo.label}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.bmiValueText}>
-                  {bmiInfo.bmi}{' '}
-                  <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: 'normal' }}>
-                    kg/m²
-                  </Text>
-                </Text>
-                <Text style={styles.bmiDescText}>
-                  Ölçülerinize göre ilk tartı kaydınız oluşturulacak ve gelişim grafiğiniz bu tabandan başlayacaktır.
-                </Text>
-              </View>
+              {/* Modern BMI Göstergesi (Item 1) */}
+              <ModernBmiCard
+                currentWeightKg={parseFloat(weightKg) || 75}
+                heightCm={parseFloat(heightCm) || 178}
+                birthYear={parseInt(birthYear, 10) || 1998}
+                sex={sex}
+              />
             </View>
           )}
 
